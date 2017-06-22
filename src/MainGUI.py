@@ -1,7 +1,6 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QTableWidget, QTableWidgetItem, QLabel, QLineEdit, QPushButton
-from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout
-from PyQt5.QtCore import pyqtSlot
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 from Transform import XZT_Transform
 
 
@@ -88,17 +87,9 @@ class App(QWidget):
         self.tableWidget.setRowCount(10)
         self.tableWidget.setColumnCount(2)
         self.tableWidget.setHorizontalHeaderItem(0, QTableWidgetItem("0 Deg. Coordinates"))
-        self.tableWidget.setHorizontalHeaderItem(1, QTableWidgetItem("15 Deg. Coordinates"))
+        self.tableWidget.setHorizontalHeaderItem(1, QTableWidgetItem("Rotated Coordinates"))
         self.tableWidget.setColumnWidth(0, 200)
         self.tableWidget.setColumnWidth(1, 200)
-        self.tableWidget.setItem(0, 0, QTableWidgetItem("Cell (0,0)"))
-        self.tableWidget.setItem(0, 1, QTableWidgetItem("Cell (0,1)"))
-        self.tableWidget.setItem(1, 0, QTableWidgetItem("Cell (1,0)"))
-        self.tableWidget.setItem(1, 1, QTableWidgetItem("Cell (1,1)"))
-        self.tableWidget.setItem(2, 0, QTableWidgetItem("Cell (2,0)"))
-        self.tableWidget.setItem(2, 1, QTableWidgetItem("Cell (2,1)"))
-        self.tableWidget.setItem(3, 0, QTableWidgetItem("Cell (3,0)"))
-        self.tableWidget.setItem(3, 1, QTableWidgetItem("Cell (3,1)"))
 
         return
 
@@ -121,6 +112,9 @@ class App(QWidget):
         hbox.addWidget(self.tableWidget)
         self.setLayout(hbox)
 
+        self.textX.setText("0")
+        self.textY.setText("0")
+        self.textZ.setText("0")
         self.textT.setText("15")
 
         return
@@ -137,11 +131,9 @@ class App(QWidget):
 
         x, z, t, fx = self.xzt_transform.get_drive_positions()
 
-        self.tableWidget.setItem(self.table_index, 0, QTableWidgetItem("%.3f,%.3f, %.3f" % (x_coord, y_coord, z_coord)))
-        self.tableWidget.setItem(self.table_index, 1, QTableWidgetItem("%.3f,%.3f, %.3f" % (fx, y_coord, z)))
+        self.tableWidget.setItem(self.table_index, 0, QTableWidgetItem("%.3f, %.3f, %.3f" % (x_coord, y_coord, z_coord)))
+        self.tableWidget.setItem(self.table_index, 1, QTableWidgetItem("%.3f, %.3f, %.3f" % (fx, y_coord, z)))
         self.table_index = self.table_index + 1
-
-        print(x, z, t, fx)
 
         return
 

@@ -77,36 +77,23 @@ class XZT_Transform(object):
         """
 
         # Get all of the offset values.
-     #   xo_offset = self.xo_offset_pv.get()
-     #   zo_offset = self.zo_offset_pv.get()
-     #   xa_offset = self.xa_offset_pv.get()
-     #   za_offset = self.za_offset_pv.get()
-     #   x_offset = self.x_offset_pv.get()
-     #   x_scale = self.x_scale_pv.get()
-     #   z_offset = self.z_offset_pv.get()
-     #   z_scale = self.z_scale_pv.get()
-     #   t_offset = self.t_offset_pv.get()
-     #   t_scale = self.t_scale_pv.get()
-     #   fine_x_offset = self.fine_x_offset_pv.get()
-     #   fine_x_scale = self.fine_x_scale_pv.get()
-
-        xo_offset = 148.924
-        zo_offset = 40.4175
-        xa_offset = 769.450
-        za_offset = 160.01
-        x_offset = 0
-        x_scale = 0.1
-        z_offset = 0
-        z_scale = 0.1
-        t_offset = 0
-        t_scale = 0.001098
-        fine_x_offset = 0
-        fine_x_scale = 0.00039551
-
+        xo_offset = self.xo_offset_pv.get()
+        zo_offset = self.zo_offset_pv.get()
+        xa_offset = self.xa_offset_pv.get()
+        za_offset = self.za_offset_pv.get()
+        x_offset = self.x_offset_pv.get()
+        x_scale = self.x_scale_pv.get()
+        z_offset = self.z_offset_pv.get()
+        z_scale = self.z_scale_pv.get()
+        t_offset = self.t_offset_pv.get()
+        t_scale = self.t_scale_pv.get()
+        fine_x_offset = self.fine_x_offset_pv.get()
+        fine_x_scale = self.fine_x_scale_pv.get()
+	
+        x_axis = self.cx_pv.get()
+        z_axis = self.cz_pv.get()
+        fine_x_axis = self.fx_pv.get()
         t_axis = angle
-        x_axis = x
-        z_axis = z
-        fine_x_axis = fine_x
 
         self.set_axis_positions(t_axis, x_axis, z_axis, fine_x_axis)
 
@@ -114,14 +101,15 @@ class XZT_Transform(object):
         sine_factor = sin(t_axis * (pi/180.0))
 
         # Caluclate the drive positions
-        x_drive = -(xo_offset * cosine_factor) - (x * cosine_factor) - (z * sine_factor)\
+        x_drive = -(xo_offset * cosine_factor) - (x_axis * cosine_factor) - (z_axis * sine_factor)\
                           - (zo_offset * sine_factor) + xa_offset
 
-        z_drive = -(zo_offset * cosine_factor) + (fine_x * sine_factor) - (z * cosine_factor)\
+        z_drive = -(zo_offset * cosine_factor) + (fine_x_axis * sine_factor) - (z_axis * cosine_factor)\
                           + (xo_offset * sine_factor) + za_offset
 
-        fine_x_drive = -(xo_offset * cosine_factor) - (fine_x * cosine_factor) - (z * sine_factor)\
+        fine_x_drive = -(xo_offset * cosine_factor) - (fine_x_axis * cosine_factor) - (z_axis * sine_factor)\
                               - (zo_offset * sine_factor) + xa_offset
+
 
         t_drive = t_axis
 

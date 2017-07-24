@@ -1,5 +1,6 @@
 import epics
 from math import cos, sin, pi
+from CS import CoordinateSystem as CS
 
 class XZT_Transform(object):
 
@@ -7,56 +8,8 @@ class XZT_Transform(object):
 
         self.cosine_factor = 0
         self.sine_factor = 0
-
-        self.x_axis = 0
-        self.z_axis = 0
-        self.y_axis = 0
-        self.fine_x_axis = 0
-        self.t_axis = 0
-
-        self.x_drive = 0
-        self.z_drive = 0
-        self.y_drive = 0
-        self.fine_x_drive = 0
-        self.t_drive = 0
-
-        self.x_motor = 0
-        self.z_motor = 0
-        self.t_motor = 0
-        self.fine_x_motor = 0
-
-        # Offsets between the center of rotation and the sample origin.
-        self.xo_offset_pv = epics.PV('9idbTAU:SM:SXO.VAL')
-        self.zo_offset_pv = epics.PV('9idbTAU:SM:SZO.VAL')
-
-        # Offsets between the center of rotation at the home positions and the optical axis.
-        self.xa_offset_pv = epics.PV('9idbTAU:SM:SXA.VAL')
-        self.za_offset_pv = epics.PV('9idbTAU:SM:SZA.VAL')
-
-        # Axes for coarse X, Z, and fine X
-        self.cx_pv = epics.PV('9idbTAU:SM:CX:RqsPos.VAL')
-        self.cz_pv = epics.PV('9idbTAU:SM:CZ:RqsPos.VAL')
-        self.fx_pv = epics.PV('9idbTAU:SM:FX:RqsPos.VAL')
-
-        # Drives for coarse X, Z, and fine X
-        self.sx_pv = epics.PV('9idbTAU:SM:SX:RqsPos.VAL')
-        self.sz_pv = epics.PV('9idbTAU:SM:SZ:RqsPos.VAL')
-        self.px_pv = epics.PV('9idbTAU:SM:PX:RqsPos.VAL')
-
-        # Motors for coarse X, Z, and fine X
-        self.mx_pv = None
-        self.mz_pv = None
-        self.tz_pv = None
-        self.mpx_pv = None
-
-        self.x_offset_pv = epics.PV('9idbTAU:SM:SX:Offset.VAL')
-        self.x_scale_pv = epics.PV('9idbTAU:SM:SX:Scale.VAL')
-        self.z_offset_pv = epics.PV('9idbTAU:SM:SZ:Offset.VAL')
-        self.z_scale_pv = epics.PV('9idbTAU:SM:SZ:Scale.VAL')
-        self.t_offset_pv = epics.PV('9idbTAU:SM:ST:Offset.VAL')
-        self.t_scale_pv = epics.PV('9idbTAU:SM:ST:Scale.VAL')
-        self.fine_x_offset_pv = epics.PV('9idbTAU:SM:PX:Offset.VAL')
-        self.fine_x_scale_pv = epics.PV('9idbTAU:SM:PX:Scale.VAL')
+	
+        self.coordsys = CS("9idbTAU")
 
         return
 
@@ -77,25 +30,15 @@ class XZT_Transform(object):
         """
 
         # Get all of the offset values.
-        xo_offset = self.xo_offset_pv.get()
-        zo_offset = self.zo_offset_pv.get()
-        xa_offset = self.xa_offset_pv.get()
-        za_offset = self.za_offset_pv.get()
-        x_offset = self.x_offset_pv.get()
-        x_scale = self.x_scale_pv.get()
-        z_offset = self.z_offset_pv.get()
-        z_scale = self.z_scale_pv.get()
-        t_offset = self.t_offset_pv.get()
-        t_scale = self.t_scale_pv.get()
-        fine_x_offset = self.fine_x_offset_pv.get()
-        fine_x_scale = self.fine_x_scale_pv.get()
+        xo_offset, yo_offset, zo_offset = self.coordsys.get_sample_origin_offsets()
+        xa_offset, ya_offset, za_offset = self.coordsys.get_optical_axis_offsets()
+        x_offset, y_offset, z_offset, t_offset, fine_x_offset, fine_y_offset = self.coordsys.get_offsets()
+        x_scale, y_scale, z_scale, t_scale, fine_x_scale, fine_y_scale = self.coordsys.get_scale_factors()
 	
-        x_axis = self.cx_pv.get()
-        z_axis = self.cz_pv.get()
-        fine_x_axis = self.fx_pv.get()
+        x_axis, y_axis, z_axis, t_axis, fine_x_axis, fine_y_axis = self.coordsys.get_axis_pv_positions()
         t_axis = angle
 
-        self.set_axis_positions(t_axis, x_axis, z_axis, fine_x_axis)
+        self.coordsys.set_axis_positions(t_axis, x_axis, y_axis, z_axis, fine_x_axis, fine_y_axis)
 
         cosine_factor = cos(t_axis * (pi/180.0))
         sine_factor = sin(t_axis * (pi/180.0))
@@ -104,33 +47,41 @@ class XZT_Transform(object):
         x_drive = -(xo_offset * cosine_factor) - (x_axis * cosine_factor) - (z_axis * sine_factor)\
                           - (zo_offset * sine_factor) + xa_offset
 
+        y_drive = -(y_axis) - yo_offset + ya_offset
+	
         z_drive = -(zo_offset * cosine_factor) + (fine_x_axis * sine_factor) - (z_axis * cosine_factor)\
                           + (xo_offset * sine_factor) + za_offset
 
         fine_x_drive = -(xo_offset * cosine_factor) - (fine_x_axis * cosine_factor) - (z_axis * sine_factor)\
                               - (zo_offset * sine_factor) + xa_offset
 
+        fine_y_drive = -(fine_y_axis) - yo_offset + ya_offset
+
 
         t_drive = t_axis
 
-        self.set_drive_positions(t_drive, x_drive, z_drive, fine_x_drive)
+        self.coordsys.set_drive_positions(t_drive, x_drive, y_drive, z_drive, fine_x_drive, fine_y_drive)
 
         # Calculate the motor positions
         if use_offsets:
 
             x_motor = x_drive / x_scale
+            y_motor = y_drive / y_scale
             z_motor = z_drive / z_scale
             t_motor = t_drive / t_scale
             fine_x_motor = x_drive / fine_x_scale
+            fine_y_motor = y_drive / fine_y_scale
 
         else:
 
             x_motor = (x_drive - x_offset) / x_scale
+            y_motor = (y_drive - y_offset) / y_scale
             z_motor = (z_drive - z_offset) / z_scale
             t_motor = (t_drive - t_offset) / t_scale
             fine_x_motor = (fine_x_drive - fine_x_offset) / fine_x_scale
+            fine_x_motor = (fine_x_drive - fine_x_offset) / fine_x_scale
 
-        self.set_motor_positions(t_motor, x_motor, z_motor, fine_x_motor)
+        self.coordsys.set_motor_positions(t_motor, x_motor, y_motor, z_motor, fine_x_motor, fine_y_motor)
 
         return
 
@@ -216,7 +167,7 @@ class XZT_Transform(object):
 
     def get_drive_positions(self):
 
-        return self.x_drive, self.z_drive, self.t_drive, self.fine_x_drive
+        return self.coordsys.get_drive_positions()
 
     def get_motor_positions(self):
 

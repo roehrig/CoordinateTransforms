@@ -78,7 +78,11 @@ class App(QWidget):
         self.addCoordinateButton = QPushButton("Add To Table")
         self.addCoordinateButton.setStyleSheet('background-color: yellow')
         self.addCoordinateButton.clicked.connect(self.on_add_button_click)
-
+	
+        self.clearTableButton = QPushButton("Clear Table")
+        self.clearTableButton.setStyleSheet('background-color: yellow')
+        self.clearTableButton.clicked.connect(self.on_clear_table_button_click)
+	
         return
 
     def create_table(self):
@@ -105,6 +109,7 @@ class App(QWidget):
         vbox.addWidget(self.labelT)
         vbox.addWidget(self.textT)
         vbox.addWidget(self.addCoordinateButton)
+        vbox.addWidget(self.clearTableButton)
         vbox.addStretch(1)
 
         hbox = QHBoxLayout()
@@ -129,13 +134,33 @@ class App(QWidget):
 
         self.xzt_transform.transform_axes(t_coord, 0, z_coord, x_coord, True)
 
-        x, z, t, fx = self.xzt_transform.get_drive_positions()
+#        x, z, t, fx = self.xzt_transform.get_drive_positions()
+        x, y, z, t, fx, fy = self.xzt_transform.get_drive_positions()
+	
+        num_items = self.tableWidget.rowCount()
+
+        if self.table_index >= num_items:
+            self.tableWidget.insertRow(self.table_index)
 
         self.tableWidget.setItem(self.table_index, 0, QTableWidgetItem("%.3f, %.3f, %.3f" % (x_coord, y_coord, z_coord)))
-        self.tableWidget.setItem(self.table_index, 1, QTableWidgetItem("%.3f, %.3f, %.3f" % (fx, y_coord, z)))
+#        self.tableWidget.setItem(self.table_index, 1, QTableWidgetItem("%.3f, %.3f, %.3f" % (fx, y_coord, z)))
+        self.tableWidget.setItem(self.table_index, 1, QTableWidgetItem("%.3f, %.3f, %.3f" % (fx, fy, z)))
         self.table_index = self.table_index + 1
 
         return
+	
+    @pyqtSlot()
+    def on_clear_table_button_click(self):
+    		    
+        self.tableWidget.clearContents()
+        self.table_index = 0
+        self.tableWidget.setRowCount(10)
+        for i in range(self.tableWidget.rowCount()):
+            if i > 9:
+                self.tableWidget.removeRow(i)
+	
+        return
+	
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

@@ -49,6 +49,8 @@ class App(QWidget):
         # Place the widgets on the window.
         self.create_layout()
 
+        self.useTextValuesRadioButton.setChecked(True)
+
         # Show widget
         self.show()
 
@@ -82,6 +84,13 @@ class App(QWidget):
         self.clearTableButton = QPushButton("Clear Table")
         self.clearTableButton.setStyleSheet('background-color: yellow')
         self.clearTableButton.clicked.connect(self.on_clear_table_button_click)
+
+        self.useTextValuesRadioButton = QRadioButton("Use entered values.", self)
+        self.usePVValuesRadioButton = QRadioButton("Use current PV values.", self)
+
+        self.buttonGroup = QButtonGroup(self)
+        self.buttonGroup.addButton(self.useTextValuesRadioButton, 1)
+        self.buttonGroup.addButton(self.usePVValuesRadioButton, 2)
 	
         return
 
@@ -110,6 +119,8 @@ class App(QWidget):
         vbox.addWidget(self.textT)
         vbox.addWidget(self.addCoordinateButton)
         vbox.addWidget(self.clearTableButton)
+        vbox.addWidget(self.useTextValuesRadioButton)
+        vbox.addWidget(self.usePVValuesRadioButton)
         vbox.addStretch(1)
 
         hbox = QHBoxLayout()
@@ -132,9 +143,14 @@ class App(QWidget):
         z_coord = float(self.textZ.text())
         t_coord = float(self.textT.text())
 
-        self.xzt_transform.transform_axes(t_coord, 0, z_coord, x_coord, True)
+        if self.usePVValuesRadioButton.isChecked():
+            self.xzt_transform.transform_axes(t_coord, 0, 0, z_coord, x_coord, y_coord, True, True)
 
-#        x, z, t, fx = self.xzt_transform.get_drive_positions()
+        if self.useTextValuesRadioButton.isChecked():
+            self.xzt_transform.transform_drives(0, 0, 0, z_coord, x_coord, y_coord, True, False)
+            x_axis, y_axis, z_axis, t_axis, fx_axis, fy_axis = self.xzt_transform.get_axis_positions()
+            self.xzt_transform.transform_axes(t_coord, x_axis, y_axis, z_axis, fx_axis, fy_axis, True, False)
+
         x, y, z, t, fx, fy = self.xzt_transform.get_drive_positions()
 	
         num_items = self.tableWidget.rowCount()
@@ -143,7 +159,6 @@ class App(QWidget):
             self.tableWidget.insertRow(self.table_index)
 
         self.tableWidget.setItem(self.table_index, 0, QTableWidgetItem("%.3f, %.3f, %.3f" % (x_coord, y_coord, z_coord)))
-#        self.tableWidget.setItem(self.table_index, 1, QTableWidgetItem("%.3f, %.3f, %.3f" % (fx, y_coord, z)))
         self.tableWidget.setItem(self.table_index, 1, QTableWidgetItem("%.3f, %.3f, %.3f" % (fx, fy, z)))
         self.table_index = self.table_index + 1
 

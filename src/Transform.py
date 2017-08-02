@@ -2,13 +2,14 @@ import epics
 from math import cos, sin, pi
 from CS import CoordinateSystem as CS
 
+
 class XZT_Transform(object):
 
     def __init__(self):
 
         self.cosine_factor = 0
         self.sine_factor = 0
-	
+
         self.coordsys = CS("9idbTAU")
 
         return
@@ -17,16 +18,24 @@ class XZT_Transform(object):
         """"
         This method takes values that represent axis positions (as defined in
         the tpmac module) and calculates the values of the corresponding
-        drive positions
+        drive and motor positions
         
         :param angle: The position value of the rotation axis.
         :type angle: float
         :param x: The position value of the coarse X axis.
         :type x: float
+        :param y: The position of the coarse Y axis
+        :type y: float
         :param z: The position value of the Z axis.
         :type z: float
         :param fine_x: The position of the fine X axis.
         :type fine_x: float
+        :param fine_y: The position of the fine y drive.
+        :type fine_y: float
+        :param use_offsets: Use offsets in the calculation of motor values.
+        :type use_offsets: bool
+        :param use_pvs: Use current pv values or manually entered values.
+        :type use_pvs: bool
         """
 
         # Get all of the offset values.
@@ -34,7 +43,7 @@ class XZT_Transform(object):
         xa_offset, ya_offset, za_offset = self.coordsys.get_optical_axis_offsets()
         x_offset, y_offset, z_offset, t_offset, fine_x_offset, fine_y_offset = self.coordsys.get_offsets()
         x_scale, y_scale, z_scale, t_scale, fine_x_scale, fine_y_scale = self.coordsys.get_scale_factors()
-	
+
         if use_pvs:
             x_axis, y_axis, z_axis, t_axis, fine_x_axis, fine_y_axis = self.coordsys.get_axis_pv_positions()
         else:
@@ -51,21 +60,19 @@ class XZT_Transform(object):
         cosine_factor = cos(t_axis * (pi/180.0))
         sine_factor = sin(t_axis * (pi/180.0))
 
-        # Caluclate the drive positions
+        # Calculate the drive positions
         x_drive = -(xo_offset * cosine_factor) - (x_axis * cosine_factor) - (z_axis * sine_factor)\
                           - (zo_offset * sine_factor) + xa_offset
 
-#        y_drive = -(y_axis) - yo_offset + ya_offset
-        y_drive = -(yo_offset) - y_axis + ya_offset
-	
+        y_drive = -yo_offset - y_axis + ya_offset
+
         z_drive = -(zo_offset * cosine_factor) + (fine_x_axis * sine_factor) - (z_axis * cosine_factor)\
                           + (xo_offset * sine_factor) + za_offset
 
         fine_x_drive = -(xo_offset * cosine_factor) - (fine_x_axis * cosine_factor) - (z_axis * sine_factor)\
                               - (zo_offset * sine_factor) + xa_offset
 
-#        fine_y_drive = -(fine_y_axis) - yo_offset + ya_offset
-        fine_y_drive = -(yo_offset) - fine_y_axis + ya_offset
+        fine_y_drive = -yo_offset - fine_y_axis + ya_offset
 
         t_drive = t_axis
 
@@ -98,16 +105,24 @@ class XZT_Transform(object):
         """"
         This method takes values that represent axis positions (as defined in
         the tpmac module) and calculates the values of the corresponding
-                drive positions
+        drive and motor positions
 
         :param angle: The position value of the rotation drive.
         :type angle: float
         :param x: The position value of the coarse X drive.
         :type x: float
+        :param y: The position of the coarse Y drive
+        :type y: float
         :param z: The position value of the Z drive.
         :type z: float
         :param fine_x: The position of the fine X drive.
         :type fine_x: float
+        :param fine_y: The position of the fine y drive.
+        :type fine_y: float
+        :param use_offsets: Use offsets in the calculation of motor values.
+        :type use_offsets: bool
+        :param use_pvs: Use current pv values or manually entered values.
+        :type use_pvs: bool
         """
 
         # Get all of the offset values.
@@ -156,7 +171,7 @@ class XZT_Transform(object):
         x_axis = -(x_drive * cosine_factor) + (z_drive * sine_factor) - xo_offset + \
                  (xa_offset * cosine_factor) + (za_offset * sine_factor)
 
-        y_axis = -(yo_offset) - y_drive + ya_offset
+        y_axis = -yo_offset - y_drive + ya_offset
 
         z_axis = -(fine_x_drive * sine_factor) - (z_drive * cosine_factor) - zo_offset + \
                  (xa_offset * sine_factor) + (za_offset * cosine_factor)
@@ -166,7 +181,7 @@ class XZT_Transform(object):
         fine_x_axis = -(fine_x_drive * cosine_factor) + (z_drive * sine_factor) - xo_offset +\
                       (xa_offset * cosine_factor) + (za_offset * sine_factor)
 
-        fine_y_axis = -(yo_offset) - fine_y_drive + ya_offset
+        fine_y_axis = -yo_offset - fine_y_drive + ya_offset
 
         self.coordsys.set_axis_positions(t_axis, x_axis, y_axis, z_axis, fine_x_axis, fine_y_axis)
 
@@ -177,30 +192,99 @@ class XZT_Transform(object):
         return
 
     def get_axis_positions(self):
+        """
+        This will return values of the axes in the coordinate system.
+
+        :return: Returns a tuple of axis positions
+        """
 
         return self.coordsys.get_axis_positions()
 
     def get_drive_positions(self):
+        """
+        This will return values of the drives in the coordinate system.
+
+        :return: Returns a tuple of drive positions
+        """
 
         return self.coordsys.get_drive_positions()
 
     def get_motor_positions(self):
+        """
+        This will return values of the motors in the coordinate system.
+
+        :return: Returns a tuple of motor positions
+        """
 
         return self.coordsys.get_motor_positions()
 
     def set_axis_positions(self, angle=0, x=0, y=0, z=0, fine_x=0, fine_y=0):
+        """
+        This function will set the axis values of the members of the
+        coordinate system.
+
+        :param angle:  The axis rotation angle of the coordinate system
+        :type  angle:  float
+        :param x:      The axis position of the X stage.
+        :type  x:      float
+        :param y:      The axis position of the Y stage.
+        :type  y:      float
+        :param z:      The axis position of the Z stage.
+        :type  z:      float
+        :param fine_x: The axis position of the fine X stage.
+        :type  fine_x: float
+        :param fine_y: The axis position of the fine Y stage.
+        :type  fine_y: float
+        :return:       None
+        """
 
         self.coordsys.set_axis_positions(angle, x, y, z, fine_x, fine_y)
 
         return
 
     def set_drive_positions(self, angle=0, x=0, y=0, z=0, fine_x=0, fine_y=0):
+        """
+        This function will set the axis values of the members of the
+        coordinate system.
+
+        :param angle:  The drive rotation angle of the coordinate system
+        :type  angle:  float
+        :param x:      The drive position of the X stage.
+        :type  x:      float
+        :param y:      The drive position of the Y stage.
+        :type  y:      float
+        :param z:      The drive position of the Z stage.
+        :type  z:      float
+        :param fine_x: The drive position of the fine X stage.
+        :type  fine_x: float
+        :param fine_y: The drive position of the fine Y stage.
+        :type  fine_y: float
+        :return:       None
+        """
 
         self.coordsys.set_drive_positions(angle, x, y, z, fine_x, fine_y)
 
         return
 
     def set_motor_positions(self, angle=0, x=0, y=0, z=0, fine_x=0, fine_y=0):
+        """
+        This function will set the axis values of the members of the
+        coordinate system.
+
+        :param angle:  The motor rotation angle of the coordinate system
+        :type  angle:  float
+        :param x:      The motor position of the X stage.
+        :type  x:      float
+        :param y:      The motor position of the Y stage.
+        :type  y:      float
+        :param z:      The motor position of the Z stage.
+        :type  z:      float
+        :param fine_x: The motor position of the fine X stage.
+        :type  fine_x: float
+        :param fine_y: The motor position of the fine Y stage.
+        :type  fine_y: float
+        :return:       None
+        """
 
         self.coordsys.set_motor_positions(angle, x, y, z, fine_x, fine_y)
 

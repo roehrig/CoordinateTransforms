@@ -1,8 +1,15 @@
 import epics
 
+
 class CoordinateSystem(object):
 
     def __init__(self, prefix):
+
+        """
+
+        :param prefix: The ioc specific prefix of the PVs
+        :type  prefix: str
+        """
     
         self.x_axis = 0
         self.z_axis = 0
@@ -85,11 +92,11 @@ class CoordinateSystem(object):
     def get_sample_origin_offsets(self):
     
         return self.xo_offset_pv.get(), self.yo_offset_pv.get(), self.zo_offset_pv.get()
-	
+
     def get_optical_axis_offsets(self):
     
         return self.xa_offset_pv.get(), self.ya_offset_pv.get(), self.za_offset_pv.get()
-	
+
     def get_axis_pv_positions(self):
     
         self.x_axis = self.cx_pv.get()
@@ -98,7 +105,7 @@ class CoordinateSystem(object):
         self.t_axis = self.ct_pv.get()
         self.fine_x_axis = self.fx_pv.get()
         self.fine_y_axis = self.fy_pv.get()
-	
+
         return self.x_axis, self.y_axis, self.z_axis, self.t_axis, self.fine_x_axis, self.fine_y_axis
 
     def get_drive_pv_positions(self):
@@ -111,7 +118,7 @@ class CoordinateSystem(object):
         self.fine_y_drive = self.sy_pv.get()
 
         return self.x_drive, self.y_drive, self.z_drive, self.t_drive, self.fine_x_drive, self.fine_y_drive
-	
+
     def get_axis_positions(self):
 
         return self.x_axis, self.y_axis, self.z_axis, self.t_axis, self.fine_x_axis, self.fine_y_axis

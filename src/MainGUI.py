@@ -3,6 +3,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from Transform import XZT_Transform
 from ScriptWriter import FlyScanScriptWriter
+from ScriptWriter import ScriptLogWriter
 
 
 class App(QWidget):
@@ -11,7 +12,7 @@ class App(QWidget):
         self.title = 'Coordinate Transform Tool'
         self.left = 100
         self.top = 100
-        self.width = 692
+        self.width = 925
         self.height = 417
         self.layout = None
         self.table_index = 0  # This is the table row.
@@ -19,7 +20,8 @@ class App(QWidget):
         self.coordinate_list = []
 
         # Define widgets to be used
-        self.tableWidget = None
+        self.coordinate_table = None
+        self.scan_table = None
 
         self.tabs = None
         self.table_tab = None
@@ -30,12 +32,8 @@ class App(QWidget):
         self.labelZ = None
         self.labelT = None
 
-        self.label_x_width = None
-        self.label_y_width = None
-        self.label_x_step = None
-        self.label_y_step = None
-        self.label_dwell = None
         self.label_file = None
+        self.label_log = None
         self.label_path = None
 
         self.textX = None
@@ -43,18 +41,15 @@ class App(QWidget):
         self.textZ = None
         self.textT = None
 
-        self.text_x_width = None
-        self.text_y_width = None
-        self.text_x_step = None
-        self.text_y_step = None
-        self.text_dwell = None
         self.text_file = None
+        self.log_file = None
         self.text_path = None
 
         self.addCoordinateButton = None
         self.clearTableButton = None
         self.selectFilePathButton = None
         self.createScriptButton = None
+        self.removeRowButton = None
 
         self.useTextValuesRadioButton = None
         self.usePVValuesRadioButton = None
@@ -130,26 +125,6 @@ class App(QWidget):
         self.buttonGroup.addButton(self.usePVValuesRadioButton, 2)
 
         # Create text labels and text boxes for creating a python script
-        self.label_x_width = QLabel('X Scan Width (um)')
-        self.text_x_width = QLineEdit()
-        self.text_x_width.setMaximumSize(150,20)
-        self.text_x_width.setToolTip('Enter the width of the scan along the X-axis')
-        self.label_y_width = QLabel('Y Scan Width (um)')
-        self.text_y_width = QLineEdit()
-        self.text_y_width.setMaximumSize(150, 20)
-        self.text_y_width.setToolTip('Enter the width of the scan along the Y-axis')
-        self.label_x_step = QLabel('X Scan Pixel Size (um)')
-        self.text_x_step = QLineEdit()
-        self.text_x_step.setMaximumSize(150, 20)
-        self.text_x_step.setToolTip('Enter the size of each pixel along the X-axis')
-        self.label_y_step = QLabel('Y Scan Pixel Size (um)')
-        self.text_y_step = QLineEdit()
-        self.text_y_step.setMaximumSize(150, 20)
-        self.text_y_step.setToolTip('Enter the size of each pixel along the Y-axis')
-        self.label_dwell = QLabel('Pixel Dwell Time (ms)')
-        self.text_dwell = QLineEdit()
-        self.text_dwell.setMaximumSize(150, 20)
-        self.text_dwell.setToolTip('Enter the time to collect data at each pixel')
         self.label_file = QLabel('Name of scan script')
         self.text_file = QLineEdit()
         self.text_file.setMinimumWidth(300)
@@ -160,13 +135,23 @@ class App(QWidget):
         self.text_path.setMinimumWidth(500)
         self.text_path.setMaximumSize(700, 20)
         self.text_path.setToolTip('Enter the file path for the python script')
+        self.label_log = QLabel('Name of log file')
+        self.log_file = QLineEdit()
+        self.log_file.setMinimumWidth(300)
+        self.log_file.setMaximumSize(500,20)
+        self.log_file.setToolTip('Enter the file name for the log file')
 
-        self.selectFilePathButton = QPushButton("Select Path")
+        self.selectFilePathButton = QPushButton('Select Path')
         self.selectFilePathButton.setStyleSheet('background-color: yellow')
         self.selectFilePathButton.setMaximumSize(200, 25)
         self.selectFilePathButton.clicked.connect(self.on_select_path_button_click)
 
-        self.createScriptButton = QPushButton("Create Script")
+        self.removeRowButton = QPushButton('Remove Row')
+        self.removeRowButton.setStyleSheet('background-color: yellow')
+        self.removeRowButton.setMaximumSize(200, 25)
+        self.removeRowButton.clicked.connect(self.on_remove_row_button_clicked)
+
+        self.createScriptButton = QPushButton('Create Script')
         self.createScriptButton.setStyleSheet('background-color: yellow')
         self.createScriptButton.setMaximumSize(200, 25)
         self.createScriptButton.clicked.connect(self.on_create_script_button_click)
@@ -175,13 +160,37 @@ class App(QWidget):
 
     def create_table(self):
         # Create table
-        self.tableWidget = QTableWidget()
-        self.tableWidget.setRowCount(10)
-        self.tableWidget.setColumnCount(2)
-        self.tableWidget.setHorizontalHeaderItem(0, QTableWidgetItem("0 Deg. Coordinates"))
-        self.tableWidget.setHorizontalHeaderItem(1, QTableWidgetItem("Rotated Coordinates"))
-        self.tableWidget.setColumnWidth(0, 200)
-        self.tableWidget.setColumnWidth(1, 200)
+        self.coordinate_table = QTableWidget()
+        self.coordinate_table.setMaximumWidth(438)
+        self.coordinate_table.setRowCount(10)
+        self.coordinate_table.setColumnCount(2)
+        self.coordinate_table.setHorizontalHeaderItem(0, QTableWidgetItem('0 Deg. Coordinates'))
+        self.coordinate_table.setHorizontalHeaderItem(1, QTableWidgetItem('Rotated Coordinates'))
+        self.coordinate_table.setColumnWidth(0, 200)
+        self.coordinate_table.setColumnWidth(1, 200)
+
+        self.scan_table = QTableWidget()
+        self.scan_table.setRowCount(10)
+        self.scan_table.setColumnCount(7)
+        self.scan_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.scan_table.setHorizontalHeaderItem(0, QTableWidgetItem('Coordinates'))
+        self.scan_table.setHorizontalHeaderItem(1, QTableWidgetItem('X Width'))
+        self.scan_table.setHorizontalHeaderItem(2, QTableWidgetItem('X Pixel'))
+        self.scan_table.setHorizontalHeaderItem(3, QTableWidgetItem('Y Width'))
+        self.scan_table.setHorizontalHeaderItem(4, QTableWidgetItem('Y Pixel'))
+        self.scan_table.setHorizontalHeaderItem(5, QTableWidgetItem('Dwell'))
+        self.scan_table.setHorizontalHeaderItem(6, QTableWidgetItem('Copy'))
+        self.scan_table.setColumnWidth(0, 200)
+        for i in range(1, 7):
+            self.scan_table.setColumnWidth(i, 100)
+
+        for i in range(9):
+            check_box = QTableWidgetItem()
+            check_box.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            check_box.setCheckState(Qt.Unchecked)
+            self.scan_table.setItem(i, 6, check_box)
+
+        self.scan_table.itemClicked.connect(self.on_copy_checkbox_clicked)
 
         return
 
@@ -205,25 +214,25 @@ class App(QWidget):
 
         table_tab_hbox = QHBoxLayout()
         table_tab_hbox.addLayout(table_tab_vbox)
-        table_tab_hbox.addWidget(self.tableWidget)
+        table_tab_hbox.addWidget(self.coordinate_table)
 
         self.tabs.addTab(self.table_tab, "Coordinates")
         self.tabs.addTab(self.file_tab, "Create Script")
         self.table_tab.setLayout(table_tab_hbox)
 
         file_tab_form_layout = QFormLayout()
-        file_tab_form_layout.addRow(self.label_x_width, self.text_x_width)
-        file_tab_form_layout.addRow(self.label_y_width, self.text_y_width)
-        file_tab_form_layout.addRow(self.label_x_step, self.text_x_step)
-        file_tab_form_layout.addRow(self.label_y_step,self.text_y_step)
-        file_tab_form_layout.addRow(self.label_dwell, self.text_dwell)
         file_tab_form_layout.addRow(self.label_file, self.text_file)
+        file_tab_form_layout.addRow(self.label_log, self.log_file)
         file_tab_form_layout.addRow(self.label_path, self.text_path)
 
+        button_hbox = QHBoxLayout()
+        button_hbox.addWidget(self.selectFilePathButton, alignment=Qt.AlignCenter)
+        button_hbox.addWidget(self.removeRowButton, alignment=Qt.AlignCenter)
+        button_hbox.addWidget(self.createScriptButton, alignment=Qt.AlignCenter)
         file_tab_vbox = QVBoxLayout()
+        file_tab_vbox.addWidget(self.scan_table)
         file_tab_vbox.addLayout(file_tab_form_layout)
-        file_tab_vbox.addWidget(self.selectFilePathButton, alignment=Qt.AlignCenter)
-        file_tab_vbox.addWidget(self.createScriptButton, alignment=Qt.AlignCenter)
+        file_tab_vbox.addLayout(button_hbox)
         self.file_tab.setLayout(file_tab_vbox)
 
         hbox = QHBoxLayout()
@@ -265,13 +274,15 @@ class App(QWidget):
         self.coordinate_list.append(self.xzt_transform.get_drive_positions())
 
         # If necessary, add a row to the table
-        num_items = self.tableWidget.rowCount()
+        num_items = self.coordinate_table.rowCount()
         if self.table_index >= num_items:
-            self.tableWidget.insertRow(self.table_index)
+            self.coordinate_table.insertRow(self.table_index)
+            self.scan_table.insertRow(self.table_index)
 
         # Add the original coordinates and the transformed coordinates to the table
-        self.tableWidget.setItem(self.table_index, 0, QTableWidgetItem("%.3f, %.3f, %.3f" % (x_coord, y_coord, z_coord)))
-        self.tableWidget.setItem(self.table_index, 1, QTableWidgetItem("%.3f, %.3f, %.3f" % (fx, fy, z)))
+        self.coordinate_table.setItem(self.table_index, 0, QTableWidgetItem("%.3f, %.3f, %.3f" % (x_coord, y_coord, z_coord)))
+        self.coordinate_table.setItem(self.table_index, 1, QTableWidgetItem("%.3f, %.3f, %.3f" % (fx, fy, z)))
+        self.scan_table.setItem(self.table_index, 0, QTableWidgetItem("%.3f, %.3f, %.3f" % (fx, fy, z)))
 
         # Increment the running count of coordinate sets.
         self.table_index = self.table_index + 1
@@ -281,12 +292,14 @@ class App(QWidget):
     @pyqtSlot()
     def on_clear_table_button_click(self):
 
-        self.tableWidget.clearContents()
+        self.coordinate_table.clearContents()
+        self.scan_table.clearContents()
         self.table_index = 0
-        self.tableWidget.setRowCount(10)
-        for i in range(self.tableWidget.rowCount()):
+        self.coordinate_table.setRowCount(10)
+        for i in range(self.coordinate_table.rowCount()):
             if i > 9:
-                self.tableWidget.removeRow(i)
+                self.coordinate_table.removeRow(i)
+                self.scan_table.removeRow(i)
 
         self.coordinate_list = []
 
@@ -307,18 +320,65 @@ class App(QWidget):
     @pyqtSlot()
     def on_create_script_button_click(self):
 
-        file_name = self.text_path.text() + '/' + self.text_file.text()
-        x_width = self.text_x_width.text()
-        y_width = self.text_y_width.text()
-        x_step = self.text_x_step.text()
-        y_step = self.text_y_step.text()
-        dwell = self.text_dwell.text()
+        x_width_list = []
+        y_width_list = []
+        x_step_list = []
+        y_step_list = []
+        dwell_list = []
+
+        # Combine the filename and file path
+        file_name = "{}{}{}".format(self.text_path.text(),'/',self.text_file.text())
+        log_file_name = "{}{}{}".format(self.text_path.text(),'/',self.log_file.text())
+
+        num_rows = self.scan_table.rowCount()
+        for row in range(self.table_index):
+
+            try:
+                x_width_list.append(self.scan_table.item(row, 1).text())
+                y_width_list.append(self.scan_table.item(row, 2).text())
+                x_step_list.append(self.scan_table.item(row, 3).text())
+                y_step_list.append(self.scan_table.item(row, 4).text())
+                dwell_list.append(self.scan_table.item(row, 5).text())
+            except TypeError:
+                return
 
         with FlyScanScriptWriter() as writer:
-            writer.write_script(file_name, self.coordinate_list, x_width, y_width, x_step, y_step, dwell)
+            writer.write_script(file_name, self.coordinate_list, x_width_list, y_width_list,
+                                x_step_list, y_step_list, dwell_list)
+
+        with ScriptLogWriter() as log:
+            log.add_scans(log_file_name, self.coordinate_list, x_width_list, y_width_list,
+                          x_step_list, y_step_list, dwell_list)
 
         return
 
+    # The default signal passes no arguements, so indicate that this should
+    # use the overloaded version that passes an object of type QTableWidgetItem.
+    @pyqtSlot(QTableWidgetItem)
+    def on_copy_checkbox_clicked(self, item):
+
+        if item.checkState() == Qt.Checked:
+            row = item.row()
+            if row > 0:
+                num_columns = self.scan_table.columnCount()
+                for column in range(1, num_columns - 1):
+                    self.scan_table.setItem(row, column, QTableWidgetItem(self.scan_table.item(row - 1, column).text()))
+
+
+        return
+
+    @pyqtSlot(QTableWidgetItem)
+    def on_remove_row_button_clicked(self, item):
+
+        row_list = self.scan_table.selectionModel().selectedRows()
+        for index in range(len(row_list) - 1, -1, -1):
+            row_num = row_list[index].row()
+            self.scan_table.removeRow(row_num)
+            self.coordinate_table.removeRow(row_num)
+            del self.coordinate_list[row_num]
+            self.table_index = self.table_index - 1
+
+        return
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

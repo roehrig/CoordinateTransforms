@@ -1,3 +1,5 @@
+import datetime
+
 class FlyScanScriptWriter(object):
 
     def __init__(self):
@@ -9,10 +11,9 @@ class FlyScanScriptWriter(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-
         return
 
-    def write_script(self, file_name, coord_list, x_width=1, y_width=1, x_step=1, y_step=1, dwell=1):
+    def write_script(self, file_name, coord_list, x_width_list, y_width_list, x_step_list, y_step_list, dwell_list):
         """
         This function will create a python script for executing a series of fly scans.
         It uses a template file and adds scan parameters that the user has entered.
@@ -21,16 +22,16 @@ class FlyScanScriptWriter(object):
         :type  file_name:    str
         :param coord_list:   A list of positions to be used for the scan.
         :type  coord_list:   list of float tuples
-        :param x_width:      The width of the scan in the X direction.
-        :type  x_width:      float
-        :param y_width:      The width of the scan in the Y direction.
-        :type  y_width:      float
-        :param x_step:       The size of each pixel in the X direction.
-        :type  x_step:       float
-        :param y_step:       The size of each pixel in the Y direction.
-        :type  y_step        float
-        :param dwell:        The amount of time to collect data at each pixel.
-        :type  dwell:        float
+        :param x_width_list: The width of the scan in the X direction.
+        :type  x_width_list: list of floats
+        :param y_width_list: The width of the scan in the Y direction.
+        :type  y_width_list: list of floats
+        :param x_step_list:  The size of each pixel in the X direction.
+        :type  x_step_list:  list of floats
+        :param y_step_list:  The size of each pixel in the Y direction.
+        :type  y_step_list:  list of floats
+        :param dwell_list:   The amount of time to collect data at each pixel.
+        :type  dwell_list:   list of floats
         :return:             None
         """
 
@@ -39,13 +40,67 @@ class FlyScanScriptWriter(object):
                 for line in template:
                     script.write(line)
                     if line == "scans = [\n":
-                        for positions in coord_list:
+                        for positions, row in zip(coord_list, range(len(x_width_list))):
                             script.write('        [{}, {}, {}, {}, {}, {}, {}, {}],\n'.format(positions[4],
-                                                                                              positions[1],
+                                                                                              positions[5],
                                                                                               positions[2],
-                                                                                              x_width, y_width,
-                                                                                              x_step, y_step,
-                                                                                              dwell))
+                                                                                              x_width_list[row],
+                                                                                              y_width_list[row],
+                                                                                              x_step_list[row],
+                                                                                              y_step_list[row],
+                                                                                              dwell_list[row]))
+
+        except IOError:
+            return
+
+        return
+
+
+class ScriptLogWriter(object):
+
+    def __init__(self):
+
+        return
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return
+
+    def add_scans(self, file_name, coord_list, x_width_list, y_width_list, x_step_list, y_step_list, dwell_list):
+        """
+        This function will create a log file of scan parameters.
+
+        :param file_name:    The name of the file to create, including path.
+        :type  file_name:    str
+        :param coord_list:   A list of positions to be used for the scan.
+        :type  coord_list:   list of float tuples
+        :param x_width_list: The width of the scan in the X direction.
+        :type  x_width_list: list of floats
+        :param y_width_list: The width of the scan in the Y direction.
+        :type  y_width_list: list of floats
+        :param x_step_list:  The size of each pixel in the X direction.
+        :type  x_step_list:  list of floats
+        :param y_step_list:  The size of each pixel in the Y direction.
+        :type  y_step_list:  list of floats
+        :param dwell_list:   The amount of time to collect data at each pixel.
+        :type  dwell_list:   list of floats
+        :return:             None
+        """
+
+        try:
+            with open(file_name, 'a') as log_file:
+                log_file.write('{}\n'.format(datetime.datetime.now()))
+                for positions, row in zip(coord_list, range(len(x_width_list))):
+                    log_file.write('[{}, {}, {}, {}, {}, {}, {}, {}],\n'.format(positions[4],
+                                                                                positions[5],
+                                                                                positions[2],
+                                                                                x_width_list[row],
+                                                                                y_width_list[row],
+                                                                                x_step_list[row],
+                                                                                y_step_list[row],
+                                                                                dwell_list[row]))
 
         except IOError:
             return

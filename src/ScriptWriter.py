@@ -4,7 +4,7 @@ class FlyScanScriptWriter(object):
 
     def __init__(self):
 
-        self.file_template = "BNP_batch_flyscan_with_z_template.py"
+        self.file_template = "/home/beams/USERBNP/scripts/roehrig/CoordinateTransforms/src/BNP_batch_flyscan_with_z_template.py"
         return
 
     def __enter__(self):
@@ -50,7 +50,8 @@ class FlyScanScriptWriter(object):
                                                                                               y_step_list[row],
                                                                                               dwell_list[row]))
 
-        except IOError:
+        except IOError as e:
+            print(e)
             return
 
         return

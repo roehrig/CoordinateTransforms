@@ -114,8 +114,8 @@ class CoordinateSystem(object):
         self.y_drive = self.sy_pv.get()
         self.z_drive = self.sz_pv.get()
         self.t_drive = self.st_pv.get()
-        self.fine_x_drive = self.sx_pv.get()
-        self.fine_y_drive = self.sy_pv.get()
+        self.fine_x_drive = self.px_pv.get()
+        self.fine_y_drive = self.py_pv.get()
 
         return self.x_drive, self.y_drive, self.z_drive, self.t_drive, self.fine_x_drive, self.fine_y_drive
 

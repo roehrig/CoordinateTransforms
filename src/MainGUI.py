@@ -2,6 +2,7 @@ import sys
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from Transform import XZT_Transform
+from CS import CoordinateSystem as CS
 from ScriptWriter import FlyScanScriptWriter
 from ScriptWriter import ScriptLogWriter
 
@@ -250,19 +251,29 @@ class App(QWidget):
     @pyqtSlot()
     def on_add_button_click(self):
 
-        # Get the coordinate values entered in the text fields.
-        x_coord = float(self.textX.text())
-        y_coord = float(self.textY.text())
-        z_coord = float(self.textZ.text())
+        # Get the angle value entered in the text field.
         t_coord = float(self.textT.text())
 
         # The user can use the current axis positions instead of the text field values.
         if self.usePVValuesRadioButton.isChecked():
-            self.xzt_transform.transform_axes(t_coord, 0, 0, z_coord, x_coord, y_coord, True, True)
+            # Create a coordinate system and get the current drive values
+            coords = CS("9idbTAU")
+            coarse_x, coarse_y, z_coord, theta, x_coord, y_coord = coords.get_drive_pv_positions()
+            # Convert the axes values to drive values using the new angle entered.
+            self.xzt_transform.transform_axes(t_coord, coarse_x, coarse_y, z_coord, x_coord, y_coord, True, True)
+            coords = None
 
         # If the user wants to use the text field values, they must first be converted to axis
         # values, then reconverted back to drive values.
         if self.useTextValuesRadioButton.isChecked():
+            # Get the coordinate values entered in the text fields.
+            # These user positions are "drive" positions
+            x_coord = float(self.textX.text())
+            y_coord = float(self.textY.text())
+            z_coord = float(self.textZ.text())
+
+            # Convert the drive positions to axes positions at 0 degrees, then back to drive
+            # positions using the new angle.
             self.xzt_transform.transform_drives(0, 0, 0, z_coord, x_coord, y_coord, True, False)
             x_axis, y_axis, z_axis, t_axis, fx_axis, fy_axis = self.xzt_transform.get_axis_positions()
             self.xzt_transform.transform_axes(t_coord, x_axis, y_axis, z_axis, fx_axis, fy_axis, True, False)
@@ -308,8 +319,9 @@ class App(QWidget):
     @pyqtSlot()
     def on_select_path_button_click(self):
 
-        file_dialog = QFileDialog(self, "Open File", "/Users/roehrig")
-        file_path = QStringList()
+        file_dialog = QFileDialog(self, "Select Directory", "")
+        file_dialog.setFileMode(QFileDialog.Directory)
+        file_path = None
 
         if file_dialog.exec_():
             file_path = file_dialog.selectedFiles()
@@ -332,7 +344,6 @@ class App(QWidget):
 
         num_rows = self.scan_table.rowCount()
         for row in range(self.table_index):
-
             try:
                 x_width_list.append(self.scan_table.item(row, 1).text())
                 y_width_list.append(self.scan_table.item(row, 2).text())

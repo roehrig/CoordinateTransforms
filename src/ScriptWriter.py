@@ -1,10 +1,12 @@
 import datetime
+import os
 
 class FlyScanScriptWriter(object):
 
     def __init__(self):
 
         self.file_template = "/home/beams/USERBNP/scripts/roehrig/CoordinateTransforms/src/BNP_batch_flyscan_with_z_template.py"
+
         return
 
     def __enter__(self):
@@ -12,6 +14,16 @@ class FlyScanScriptWriter(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return
+
+    def set_template_file(self, file_name):
+
+        self.file_template = file_name
+
+        return
+
+    def set_file_permissions(self, file_name, mask):
+
+        os.chmod(file_name, mask)
 
     def write_script(self, file_name, coord_list, x_width_list, y_width_list, x_step_list, y_step_list, dwell_list):
         """
@@ -41,14 +53,10 @@ class FlyScanScriptWriter(object):
                     script.write(line)
                     if line == "scans = [\n":
                         for positions, row in zip(coord_list, range(len(x_width_list))):
-                            script.write('        [{}, {}, {}, {}, {}, {}, {}, {}],\n'.format(positions[4],
-                                                                                              positions[5],
-                                                                                              positions[2],
-                                                                                              x_width_list[row],
-                                                                                              y_width_list[row],
-                                                                                              x_step_list[row],
-                                                                                              y_step_list[row],
-                                                                                              dwell_list[row]))
+                            script.write('        [{:.3f}, {:.3f}, {:.3f}, {}, {}, {}, {}, {}]'
+                                         ',\n'.format(positions[4], positions[5], positions[2], x_width_list[row],
+                                                      y_width_list[row], x_step_list[row], y_step_list[row],
+                                                      dwell_list[row]))
 
         except IOError as e:
             print(e)

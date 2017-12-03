@@ -1,4 +1,5 @@
 import sys
+import stat
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from Transform import XZT_Transform
@@ -48,6 +49,7 @@ class App(QWidget):
 
         self.addCoordinateButton = None
         self.clearTableButton = None
+        self.selectTemplateButton = None
         self.selectFilePathButton = None
         self.createScriptButton = None
         self.removeRowButton = None
@@ -126,6 +128,10 @@ class App(QWidget):
         self.buttonGroup.addButton(self.usePVValuesRadioButton, 2)
 
         # Create text labels and text boxes for creating a python script
+        self.label_template = QLabel('Name of script template')
+        self.text_template = QLineEdit()
+        self.text_template.setMinimumWidth(500)
+        self.text_template.setMaximumSize(700, 20)
         self.label_file = QLabel('Name of scan script')
         self.text_file = QLineEdit()
         self.text_file.setMinimumWidth(300)
@@ -142,7 +148,12 @@ class App(QWidget):
         self.log_file.setMaximumSize(500,20)
         self.log_file.setToolTip('Enter the file name for the log file')
 
-        self.selectFilePathButton = QPushButton('Select Path')
+        self.selectTemplateButton = QPushButton('Select Template File')
+        self.selectTemplateButton.setStyleSheet('background-color: yellow')
+        self.selectTemplateButton.setMaximumSize(200, 25)
+        self.selectTemplateButton.clicked.connect(self.on_select_template_button_click)
+
+        self.selectFilePathButton = QPushButton('Select Script Path')
         self.selectFilePathButton.setStyleSheet('background-color: yellow')
         self.selectFilePathButton.setMaximumSize(200, 25)
         self.selectFilePathButton.clicked.connect(self.on_select_path_button_click)
@@ -222,11 +233,13 @@ class App(QWidget):
         self.table_tab.setLayout(table_tab_hbox)
 
         file_tab_form_layout = QFormLayout()
+        file_tab_form_layout.addRow(self.label_template, self.text_template)
         file_tab_form_layout.addRow(self.label_file, self.text_file)
         file_tab_form_layout.addRow(self.label_log, self.log_file)
         file_tab_form_layout.addRow(self.label_path, self.text_path)
 
         button_hbox = QHBoxLayout()
+        button_hbox.addWidget(self.selectTemplateButton, alignment=Qt.AlignCenter)
         button_hbox.addWidget(self.selectFilePathButton, alignment=Qt.AlignCenter)
         button_hbox.addWidget(self.removeRowButton, alignment=Qt.AlignCenter)
         button_hbox.addWidget(self.createScriptButton, alignment=Qt.AlignCenter)
@@ -317,6 +330,19 @@ class App(QWidget):
         return
 
     @pyqtSlot()
+    def on_select_template_button_click(self):
+
+        file_dialog = QFileDialog(self, "Select Template File", "")
+        file_dialog.setFileMode(QFileDialog.AnyFile)
+        file_path = None
+
+        if file_dialog.exec_():
+            file_path = file_dialog.selectedFiles()
+            self.text_template.setText(file_path[0])
+
+        return
+
+    @pyqtSlot()
     def on_select_path_button_click(self):
 
         file_dialog = QFileDialog(self, "Select Directory", "")
@@ -339,6 +365,7 @@ class App(QWidget):
         dwell_list = []
 
         # Combine the filename and file path
+        template_name = "{}".format(self.text_template.text())
         file_name = "{}{}{}".format(self.text_path.text(),'/',self.text_file.text())
         log_file_name = "{}{}{}".format(self.text_path.text(),'/',self.log_file.text())
 
@@ -354,8 +381,12 @@ class App(QWidget):
                 return
 
         with FlyScanScriptWriter() as writer:
+            writer.set_template_file(template_name)
             writer.write_script(file_name, self.coordinate_list, x_width_list, y_width_list,
                                 x_step_list, y_step_list, dwell_list)
+            mask = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP | \
+                   stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH
+            writer.set_file_permissions(file_name, mask)
 
         with ScriptLogWriter() as log:
             log.add_scans(log_file_name, self.coordinate_list, x_width_list, y_width_list,

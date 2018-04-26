@@ -13,6 +13,13 @@ from ScriptWriter import FlyScanScriptWriter
 from ScriptWriter import ScriptLogWriter
 from RunWidget import RunWisget
 
+try:
+    from PyQt4.QtGui import *
+    from PyQt4.QtCore import *
+except:
+    from PyQt5.QtWidgets import *
+    from PyQt5.QtCore import *
+
 
 class App(QWidget):
     def __init__(self):
@@ -130,11 +137,13 @@ class App(QWidget):
         self.clearTableButton.clicked.connect(self.on_clear_table_button_click)
 
         self.useTextValuesRadioButton = QRadioButton("Use entered values.", self)
+        self.useTextValuesAtZeroRadioButton = QRadioButton("Use entered values at 0 degrees.", self)
         self.usePVValuesRadioButton = QRadioButton("Use current PV values.", self)
 
         self.buttonGroup = QButtonGroup(self)
         self.buttonGroup.addButton(self.useTextValuesRadioButton, 1)
-        self.buttonGroup.addButton(self.usePVValuesRadioButton, 2)
+        self.buttonGroup.addButton(self.useTextValuesAtZeroRadioButton, 2)
+        self.buttonGroup.addButton(self.usePVValuesRadioButton, 3)
 
         # Create text labels and text boxes for creating a python script
         self.label_template = QLabel('Name of script template')
@@ -230,6 +239,7 @@ class App(QWidget):
         table_tab_vbox.addWidget(self.addCoordinateButton)
         table_tab_vbox.addWidget(self.clearTableButton)
         table_tab_vbox.addWidget(self.useTextValuesRadioButton)
+        table_tab_vbox.addWidget(self.useTextValuesAtZeroRadioButton)
         table_tab_vbox.addWidget(self.usePVValuesRadioButton)
         table_tab_vbox.addStretch(1)
 
@@ -404,7 +414,7 @@ class App(QWidget):
 
         return
 
-    # The default signal passes no arguements, so indicate that this should
+    # The default signal passes no arguments, so indicate that this should
     # use the overloaded version that passes an object of type QTableWidgetItem.
     @pyqtSlot(QTableWidgetItem)
     def on_copy_checkbox_clicked(self, item):
@@ -416,12 +426,12 @@ class App(QWidget):
                 for column in range(1, num_columns - 1):
                     self.scan_table.setItem(row, column, QTableWidgetItem(self.scan_table.item(row - 1, column).text()))
 
-
         return
 
-    @pyqtSlot(bool)
-    def on_remove_row_button_clicked(self, item):
-
+#    @pyqtSlot(QTableWidgetItem)
+#    def on_remove_row_button_clicked(self, item):
+    @pyqtSlot()
+    def on_remove_row_button_clicked(self):
         row_list = self.scan_table.selectionModel().selectedRows()
         for index in range(len(row_list) - 1, -1, -1):
             row_num = row_list[index].row()

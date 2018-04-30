@@ -1,9 +1,17 @@
 import sys
 import stat
+try:
+    from PyQt4.QtGui import *
+    from PyQt4.QtCore import *
+except:
+    from PyQt5.QtGui import *
+    from PyQt5.QtCore import *
+    from PyQt5.QtWidgets import *
 from Transform import XZT_Transform
 from CS import CoordinateSystem as CS
 from ScriptWriter import FlyScanScriptWriter
 from ScriptWriter import ScriptLogWriter
+from RunWidget import RunWisget
 
 try:
     from PyQt4.QtGui import *
@@ -33,6 +41,7 @@ class App(QWidget):
         self.tabs = None
         self.table_tab = None
         self.file_tab = None
+        self.run_tab = None
 
         self.labelX = None
         self.labelY = None
@@ -78,9 +87,11 @@ class App(QWidget):
 
         self.table_tab = QWidget()
         self.file_tab = QWidget()
+        self.run_tab = RunWisget()
 
         self.tabs.addTab(self.table_tab, "Table")
         self.tabs.addTab(self.file_tab, "File")
+        self.tabs.addTab(self.run_tab, "Run")
 
         # Create all of the gui widgets.
         self.create_text_entry()
@@ -238,6 +249,7 @@ class App(QWidget):
 
         self.tabs.addTab(self.table_tab, "Coordinates")
         self.tabs.addTab(self.file_tab, "Create Script")
+        self.tabs.addTab(self.run_tab, "Run Script")
         self.table_tab.setLayout(table_tab_hbox)
 
         file_tab_form_layout = QFormLayout()
@@ -420,7 +432,6 @@ class App(QWidget):
 #    def on_remove_row_button_clicked(self, item):
     @pyqtSlot()
     def on_remove_row_button_clicked(self):
-
         row_list = self.scan_table.selectionModel().selectedRows()
         for index in range(len(row_list) - 1, -1, -1):
             row_num = row_list[index].row()

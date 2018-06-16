@@ -40,28 +40,32 @@ POSSIBILITY OF SUCH DAMAGE.
 try:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
-except:
+except ImportError:
     from PyQt5.QtGui import *
     from PyQt5.QtCore import *
     from PyQt5.QtWidgets import *
 
-class RunWisget(QWidget):
-    def __init__(self):
-        super(RunWisget, self).__init__()
+
+class RunWidget(QWidget):
+    def __init__(self, parent):
+        super(RunWidget, self).__init__()
+
+        self.parent = parent
+
         self.title = 'Run Python Script Tool'
         self.startButton = QPushButton("Start")
-        self.startButton.clicked.connect(self.onStartPush)
+        self.startButton.clicked.connect(self.on_start_button_click)
         self.stopButton = QPushButton("Stop")
-        self.stopButton.clicked.connect(self.onStopPush)
+        self.stopButton.clicked.connect(self.on_stop_button_click)
         self.outputTextbox = QPlainTextEdit(self)
         self.outputTextbox.resize(300, 400)
         self.scriptFullPath = QLineEdit(self)
         self.browseButton = QPushButton('Browse')
-        self.browseButton.clicked.connect(self.onBrowsePush)
+        self.browseButton.clicked.connect(self.on_browse_button_click)
         self.scriptProcess = QProcess(self)
-        self.scriptProcess.readyRead.connect(self.onProcessReadyRead)
-        self.scriptProcess.started.connect(self.onProcessStarted)
-        self.scriptProcess.finished.connect(self.onProcessFinished)
+        self.scriptProcess.readyRead.connect(self.on_process_ready_read)
+        self.scriptProcess.started.connect(self.on_process_started)
+        self.scriptProcess.finished.connect(self.on_process_finished)
 
         vbox = QVBoxLayout()
         hbox1 = QHBoxLayout()
@@ -79,8 +83,8 @@ class RunWisget(QWidget):
 
         self.setLayout(vbox)
 
-    def setButtonsState(self, runState):
-        if runState == 1:
+    def set_buttons_state(self, run_state):
+        if run_state == 1:
             self.startButton.setEnabled(False)
             self.scriptFullPath.setEnabled(False)
             self.browseButton.setEnabled(False)
@@ -92,14 +96,14 @@ class RunWisget(QWidget):
             self.stopButton.setEnabled(True)
 
     @pyqtSlot()
-    def onBrowsePush(self):
-        fileName = QFileDialog.getOpenFileName(self, "Select Python Script", "", "Python Files (*.py)")
-        if fileName is not None:
-            if len(fileName) > 0:
-                self.scriptFullPath.setText(fileName[0])
+    def on_browse_button_click(self):
+        file_name = QFileDialog.getOpenFileName(self, "Select Python Script", "", "Python Files (*.py)")
+        if file_name is not None:
+            if len(file_name) > 0:
+                self.scriptFullPath.setText(file_name[0])
 
     @pyqtSlot()
-    def onStartPush(self):
+    def on_start_button_click(self):
         print('Starting script: ' + self.scriptFullPath.text())
         if self.scriptProcess.isOpen():
             print ('Close process first')
@@ -107,23 +111,23 @@ class RunWisget(QWidget):
         self.scriptProcess.start('python', [self.scriptFullPath.text()])
 
     @pyqtSlot()
-    def onStopPush(self):
+    def on_stop_button_click(self):
         print('Stopping script: ' + self.scriptFullPath.text())
-        self.setButtonsState(0)
+        self.set_buttons_state(0)
         if self.scriptProcess.isOpen():
             self.scriptProcess.kill()
 
     @pyqtSlot()
-    def onProcessReadyRead(self):
+    def on_process_ready_read(self):
         self.outputTextbox.insertPlainText(str(self.scriptProcess.readAll(), encoding='utf-8'))
         self.outputTextbox.verticalScrollBar().setValue(self.outputTextbox.verticalScrollBar().maximum())
 
     @pyqtSlot()
-    def onProcessStarted(self):
+    def on_process_started(self):
         print('Python Script Started')
-        self.setButtonsState(1)
+        self.set_buttons_state(1)
 
     @pyqtSlot(int)
-    def onProcessFinished(self, finVal):
+    def on_process_finished(self, finVal):
         print('Python Script Finished with return value: ' + str(finVal))
-        self.setButtonsState(0)
+        self.set_buttons_state(0)

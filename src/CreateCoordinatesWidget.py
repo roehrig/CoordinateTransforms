@@ -57,7 +57,7 @@ class CoordinatesWidget(QWidget):
 
         self.table_index = 0  # This is the table row.
         self.coordinate_list = []
-        self.xzt_transform = XZT_Transform()
+        self.xzt_transform = XZT_Transform('9idbTAU:')
 
         # Create text labels and text boxes for Coordinates
         self.labelX = QLabel('X Coordinate (um)')

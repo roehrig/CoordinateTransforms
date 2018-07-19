@@ -43,12 +43,12 @@ from CS import CoordinateSystem as CS
 
 class XZT_Transform(object):
 
-    def __init__(self):
+    def __init__(self, prefix):
 
         self.cosine_factor = 0
         self.sine_factor = 0
 
-        self.coordsys = CS("9idbTAU")
+        self.coordsys = CS(prefix)
 
         return
 

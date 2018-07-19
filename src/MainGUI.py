@@ -56,7 +56,7 @@ class App(QWidget):
         self.title = 'Coordinate Transform Tool'
         self.left = 100
         self.top = 100
-        self.width = 925
+        self.width = 1125
         self.height = 517
         self.layout = None
         self.table_index = 0  # This is the table row.
@@ -70,6 +70,8 @@ class App(QWidget):
         # Create variables for two buttons
         self.clearTableButton = None
         self.removeRowButton = None
+        self.loadConfigButton = None
+        self.saveConfigButton = None
 
         self.init_ui()
 
@@ -85,9 +87,9 @@ class App(QWidget):
         self.file_tab = ScriptWidget(self)
         self.run_tab = RunWidget(self)
 
-        self.tabs.addTab(self.table_tab, "Table")
-        self.tabs.addTab(self.file_tab, "File")
-        self.tabs.addTab(self.run_tab, "Run")
+#        self.tabs.addTab(self.table_tab, "Table")
+#        self.tabs.addTab(self.file_tab, "File")
+#        self.tabs.addTab(self.run_tab, "Run")
 
         # Create all of the gui widgets.
         self.create_buttons()
@@ -114,6 +116,16 @@ class App(QWidget):
         self.removeRowButton.setMaximumSize(200, 25)
         self.removeRowButton.clicked.connect(self.on_remove_row_button_clicked)
 
+        self.loadConfigButton = QPushButton('Load Config')
+        self.loadConfigButton.setStyleSheet('background-color: yellow')
+        self.loadConfigButton.setMaximumSize(200, 25)
+        self.loadConfigButton.clicked.connect(self.on_load_config_button_clicked)
+
+        self.saveConfigButton = QPushButton('Save Config')
+        self.saveConfigButton.setStyleSheet('background-color: yellow')
+        self.saveConfigButton.setMaximumSize(200, 25)
+        self.saveConfigButton.clicked.connect(self.on_save_config_button_clicked)
+
         return
 
     def create_layout(self):
@@ -123,11 +135,24 @@ class App(QWidget):
         self.tabs.addTab(self.file_tab, "Create Script")
         self.tabs.addTab(self.run_tab, "Run Script")
 
+        # Create vertical layouts for the buttons
+        button_vbox1 = QVBoxLayout()
+        button_vbox1.addWidget(self.clearTableButton)
+        button_vbox1.addWidget(self.removeRowButton)
+
+        button_vbox2 = QVBoxLayout()
+        button_vbox2.addWidget(self.loadConfigButton)
+        button_vbox2.addWidget(self.saveConfigButton)
+
+        # Create a horizontal layout for the buttons.
+        hbox = QHBoxLayout()
+        hbox.addLayout(button_vbox1)
+        hbox.addLayout(button_vbox2)
+
         # Create a vertical layout and add the tabs and buttons
         vbox = QVBoxLayout()
         vbox.addWidget(self.tabs)
-        vbox.addWidget(self.clearTableButton)
-        vbox.addWidget(self.removeRowButton)
+        vbox.addLayout(hbox)
 
         self.setLayout(vbox)
 
@@ -149,6 +174,16 @@ class App(QWidget):
             rows = self.file_tab.get_selected_rows()
         self.table_tab.remove_row(rows)
         self.file_tab.remove_row(rows)
+
+        return
+
+    @pyqtSlot()
+    def on_load_config_button_clicked(self):
+
+        return
+
+    @pyqtSlot()
+    def on_save_config_button_clicked(self):
 
         return
 

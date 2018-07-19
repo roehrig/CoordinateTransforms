@@ -78,17 +78,20 @@ class CoordinatesWidget(QWidget):
         self.textT.setToolTip('Enter the Theta coordinate')
 
         # Create a pushbutton and assign the click signal to a slot.
-        self.addCoordinateButton = QPushButton("Add To Table")
+        self.addCoordinateButton = QPushButton('Add To Table')
         self.addCoordinateButton.setStyleSheet('background-color: yellow')
         self.addCoordinateButton.clicked.connect(self.on_add_button_click)
 
-        self.useTextValuesRadioButton = QRadioButton("Use entered values.", self)
-        self.useTextValuesAtZeroRadioButton = QRadioButton("Use entered values at 0 degrees.", self)
-        self.usePVValuesRadioButton = QRadioButton("Use current PV values.", self)
+        self.useTextValuesRadioButton = QRadioButton('Use entered values.', self)
+        self.useTextValuesRadioButton.setToolTip('Use manually entered stage positions.')
+#        self.useTextValuesAtZeroRadioButton = QRadioButton('Use entered values at 0 degrees.', self)
+#        self.useTextValuesAtZeroRadioButton.setToolTip('Use manually entered stage positions at 0 degrees.')
+        self.usePVValuesRadioButton = QRadioButton('Use current PV values.', self)
+        self.usePVValuesRadioButton.setToolTip('Get stage positions from current PV values.')
 
         self.buttonGroup = QButtonGroup(self)
         self.buttonGroup.addButton(self.useTextValuesRadioButton, 1)
-        self.buttonGroup.addButton(self.useTextValuesAtZeroRadioButton, 2)
+#        self.buttonGroup.addButton(self.useTextValuesAtZeroRadioButton, 2)
         self.buttonGroup.addButton(self.usePVValuesRadioButton, 3)
 
         # Create table
@@ -113,7 +116,7 @@ class CoordinatesWidget(QWidget):
         table_tab_vbox.addWidget(self.textT)
         table_tab_vbox.addWidget(self.addCoordinateButton)
         table_tab_vbox.addWidget(self.useTextValuesRadioButton)
-        table_tab_vbox.addWidget(self.useTextValuesAtZeroRadioButton)
+#        table_tab_vbox.addWidget(self.useTextValuesAtZeroRadioButton)
         table_tab_vbox.addWidget(self.usePVValuesRadioButton)
         table_tab_vbox.addStretch(1)
 

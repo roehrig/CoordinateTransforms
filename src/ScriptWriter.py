@@ -65,7 +65,8 @@ class FlyScanScriptWriter(object):
 
         os.chmod(file_name, mask)
 
-    def write_script(self, file_name, coord_list, x_width_list, y_width_list, x_step_list, y_step_list, dwell_list):
+    def write_script(self, file_name, coord_list, x_width_list, y_width_list, x_step_list, y_step_list, dwell_list,
+                     use_theta=False, use_z=False):
         """
         This function will create a python script for executing a series of fly scans.
         It uses a template file and adds scan parameters that the user has entered.
@@ -84,8 +85,22 @@ class FlyScanScriptWriter(object):
         :type  y_step_list:  list of floats
         :param dwell_list:   The amount of time to collect data at each pixel.
         :type  dwell_list:   list of floats
+        :param use_theta:    Should the theta value be included in the scan script.
+        :type  use_theta:    bool
+        :param use_z         Should the Z value be included in the scan script.
+        :type  use_z         bool
         :return:             None
         """
+
+        format_string = '        [{X:.3f}, {Y:.3f}, {x_width}, {y_width}, {x_step}, {y_step}, {dwell}],\n'
+
+        if use_z:
+            index = format_string.find('{x_width}')
+            format_string = format_string[:index] + '{Z:.3f}, ' + format_string[index:]
+
+        if use_theta:
+            index = format_string.find('{x_width}')
+            format_string = format_string[:index] + '{Theta:.3f}, ' + format_string[index:]
 
         try:
             with open(file_name, 'w') as script, open(self.file_template, 'r') as template:
@@ -93,10 +108,17 @@ class FlyScanScriptWriter(object):
                     script.write(line)
                     if line == "scans = [\n":
                         for positions, row in zip(coord_list, range(len(x_width_list))):
-                            script.write('        [{:.3f}, {:.3f}, {:.3f}, {}, {}, {}, {}, {}]'
-                                         ',\n'.format(positions[4], positions[5], positions[2], x_width_list[row],
-                                                      y_width_list[row], x_step_list[row], y_step_list[row],
-                                                      dwell_list[row]))
+                            format_dict = {'X': positions[4], 'Y': positions[5], 'x_width': x_width_list[row],
+                                           'y_width': y_width_list[row], 'x_step': x_step_list[row],
+                                           'y_step': y_step_list[row], 'dwell': dwell_list[row]}
+
+                            if use_z:
+                                format_dict['Z'] = positions[2]
+
+                            if use_theta:
+                                format_dict['Theta'] = positions[3]
+
+                            script.write(format_string.format(**format_dict))
 
         except IOError as e:
             print(e)
@@ -120,7 +142,8 @@ class ScriptLogWriter(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         return
 
-    def add_scans(self, file_name, coord_list, x_width_list, y_width_list, x_step_list, y_step_list, dwell_list):
+    def add_scans(self, file_name, coord_list, x_width_list, y_width_list, x_step_list, y_step_list, dwell_list,
+                  use_theta=False, use_z=False):
         """
         This function will create a log file of scan parameters.
 
@@ -138,21 +161,38 @@ class ScriptLogWriter(object):
         :type  y_step_list:  list of floats
         :param dwell_list:   The amount of time to collect data at each pixel.
         :type  dwell_list:   list of floats
+        :param use_theta:    Should the theta value be included in the scan script.
+        :type  use_theta:    bool
+        :param use_z         Should the Z value be included in the scan script.
+        :type  use_z         bool
         :return:             None
         """
+
+        format_string = '        [{X:.3f}, {Y:.3f}, {x_width}, {y_width}, {x_step}, {y_step}, {dwell}],\n'
+
+        if use_z:
+            index = format_string.find('{x_width}')
+            format_string = format_string[:index] + '{Z:.3f}, ' + format_string[index:]
+
+        if use_theta:
+            index = format_string.find('{x_width}')
+            format_string = format_string[:index] + '{Theta:.3f}, ' + format_string[index:]
 
         try:
             with open(file_name, 'a') as log_file:
                 log_file.write('{}\n'.format(datetime.datetime.now()))
                 for positions, row in zip(coord_list, range(len(x_width_list))):
-                    log_file.write('[{:.3f}, {:.3f}, {:.3f}, {}, {}, {}, {}, {}],\n'.format(positions[4],
-                                                                                positions[5],
-                                                                                positions[2],
-                                                                                x_width_list[row],
-                                                                                y_width_list[row],
-                                                                                x_step_list[row],
-                                                                                y_step_list[row],
-                                                                                dwell_list[row]))
+                    format_dict = {'X': positions[4], 'Y': positions[5], 'x_width': x_width_list[row],
+                                   'y_width': y_width_list[row], 'x_step': x_step_list[row],
+                                   'y_step': y_step_list[row], 'dwell': dwell_list[row]}
+
+                    if use_z:
+                        format_dict['Z'] = positions[2]
+
+                    if use_theta:
+                        format_dict['Theta'] = positions[3]
+
+                    log_file.write(format_string.format(**format_dict))
 
         except IOError:
             return

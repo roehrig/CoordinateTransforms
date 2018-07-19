@@ -65,57 +65,76 @@ class ScriptWidget(QWidget):
         self.text_template = QLineEdit()
         self.text_template.setMinimumWidth(500)
         self.text_template.setMaximumSize(700, 20)
+        self.text_template.setToolTip('Enter the file name for the python script template.')
         self.label_file = QLabel('Name of scan script')
         self.text_file = QLineEdit()
         self.text_file.setMinimumWidth(300)
         self.text_file.setMaximumSize(500, 20)
-        self.text_file.setToolTip('Enter the file name for the python script')
+        self.text_file.setToolTip('Enter the file name for the python script.')
         self.label_path = QLabel('Path to scan script')
         self.text_path = QLineEdit()
         self.text_path.setMinimumWidth(500)
         self.text_path.setMaximumSize(700, 20)
-        self.text_path.setToolTip('Enter the file path for the python script')
+        self.text_path.setToolTip('Enter the file path for the python script.')
         self.label_log = QLabel('Name of log file')
         self.log_file = QLineEdit()
         self.log_file.setMinimumWidth(300)
         self.log_file.setMaximumSize(500, 20)
-        self.log_file.setToolTip('Enter the file name for the log file')
+        self.log_file.setToolTip('Enter the file name for the log file.')
 
         self.selectTemplateButton = QPushButton('Select Template File')
         self.selectTemplateButton.setStyleSheet('background-color: yellow')
         self.selectTemplateButton.setMaximumSize(200, 25)
+        self.selectTemplateButton.setToolTip('Open a window to select a template file.')
         self.selectTemplateButton.clicked.connect(self.on_select_template_button_click)
 
         self.selectFilePathButton = QPushButton('Select Script Path')
         self.selectFilePathButton.setStyleSheet('background-color: yellow')
         self.selectFilePathButton.setMaximumSize(200, 25)
+        self.selectFilePathButton.setToolTip('Open a window to select the save path for the scan script.')
         self.selectFilePathButton.clicked.connect(self.on_select_path_button_click)
 
         self.createScriptButton = QPushButton('Create Script')
         self.createScriptButton.setStyleSheet('background-color: yellow')
         self.createScriptButton.setMaximumSize(200, 25)
+        self.createScriptButton.setToolTip('Generate the scan script using entered parameters.')
         self.createScriptButton.clicked.connect(self.on_create_script_button_click)
+
+#        self.printScanButton = QPushButton('Print Scan')
+#        self.printScanButton.setStyleSheet('background-color: yellow')
+#        self.printScanButton.setMaximumSize(200, 25)
+#        self.printScanButton.setToolTip('Print the scan table.')
+#        self.printScanButton.clicked.connect(self.on_print_scan_button_click)
+
+        self.useThetaRadioButton = QCheckBox('Create a tomo scan.', self)
+        self.useThetaRadioButton.setToolTip('Check if creating a tomography scan')
+        self.useZRadioButton = QCheckBox('Include Z values.', self)
+        self.useZRadioButton.setToolTip('Check if Z position values should be in the scan.')
 
         self.scan_table = QTableWidget()
         self.scan_table.setRowCount(10)
-        self.scan_table.setColumnCount(7)
+        self.scan_table.setColumnCount(10)
         self.scan_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.scan_table.setHorizontalHeaderItem(0, QTableWidgetItem('Coordinates'))
-        self.scan_table.setHorizontalHeaderItem(1, QTableWidgetItem('X Width'))
-        self.scan_table.setHorizontalHeaderItem(2, QTableWidgetItem('X Step Size'))
-        self.scan_table.setHorizontalHeaderItem(3, QTableWidgetItem('Y Width'))
-        self.scan_table.setHorizontalHeaderItem(4, QTableWidgetItem('Y Step Size'))
-        self.scan_table.setHorizontalHeaderItem(5, QTableWidgetItem('Dwell'))
-        self.scan_table.setHorizontalHeaderItem(6, QTableWidgetItem('Copy'))
-        self.scan_table.setColumnWidth(0, 200)
-        for i in range(1, 7):
+#        self.scan_table.setHorizontalHeaderItem(0, QTableWidgetItem('Coordinates'))
+        self.scan_table.setHorizontalHeaderItem(0, QTableWidgetItem('X Center'))
+        self.scan_table.setHorizontalHeaderItem(1, QTableWidgetItem('Y Center'))
+        self.scan_table.setHorizontalHeaderItem(2, QTableWidgetItem('Z Center'))
+        self.scan_table.setHorizontalHeaderItem(3, QTableWidgetItem('Theta'))
+        self.scan_table.setHorizontalHeaderItem(4, QTableWidgetItem('X Width'))
+        self.scan_table.setHorizontalHeaderItem(5, QTableWidgetItem('X Step Size'))
+        self.scan_table.setHorizontalHeaderItem(6, QTableWidgetItem('Y Width'))
+        self.scan_table.setHorizontalHeaderItem(7, QTableWidgetItem('Y Step Size'))
+        self.scan_table.setHorizontalHeaderItem(8, QTableWidgetItem('Dwell'))
+        self.scan_table.setHorizontalHeaderItem(9, QTableWidgetItem('Copy'))
+#        self.scan_table.setColumnWidth(0, 200)
+        for i in range(0, 10):
             self.scan_table.setColumnWidth(i, 100)
 
-        for i in range(9):
+        for i in range(10):
             check_box = QTableWidgetItem()
             check_box.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
             check_box.setCheckState(Qt.Unchecked)
-            self.scan_table.setItem(i, 6, check_box)
+            self.scan_table.setItem(i, 9, check_box)
 
         self.scan_table.itemClicked.connect(self.on_copy_checkbox_clicked)
 
@@ -125,14 +144,25 @@ class ScriptWidget(QWidget):
         file_tab_form_layout.addRow(self.label_log, self.log_file)
         file_tab_form_layout.addRow(self.label_path, self.text_path)
 
-        button_hbox = QHBoxLayout()
+        button_hbox = QVBoxLayout()
         button_hbox.addWidget(self.selectTemplateButton, alignment=Qt.AlignCenter)
         button_hbox.addWidget(self.selectFilePathButton, alignment=Qt.AlignCenter)
         button_hbox.addWidget(self.createScriptButton, alignment=Qt.AlignCenter)
+
+        radio_vbox = QVBoxLayout()
+        radio_vbox.addWidget(self.useThetaRadioButton, alignment=Qt.AlignCenter)
+        radio_vbox.addWidget(self.useZRadioButton, alignment=Qt.AlignCenter)
+
+        hbox = QHBoxLayout()
+        hbox.addLayout(button_hbox)
+        hbox.addLayout(file_tab_form_layout)
+        hbox.addLayout(radio_vbox)
+
         file_tab_vbox = QVBoxLayout()
         file_tab_vbox.addWidget(self.scan_table)
-        file_tab_vbox.addLayout(file_tab_form_layout)
-        file_tab_vbox.addLayout(button_hbox)
+#        file_tab_vbox.addLayout(file_tab_form_layout)
+#        file_tab_vbox.addLayout(button_hbox)
+        file_tab_vbox.addLayout(hbox)
         self.setLayout(file_tab_vbox)
 
     # The default signal passes no arguments, so indicate that this should
@@ -157,6 +187,9 @@ class ScriptWidget(QWidget):
             if i > 9:
                 self.scan_table.removeRow(i)
 
+        self.coordinate_list = []
+        self.table_index = 0
+
         return
 
     def remove_row(self, row_list):
@@ -164,6 +197,8 @@ class ScriptWidget(QWidget):
         for index in range(len(row_list) - 1, -1, -1):
             row_num = row_list[index].row()
             self.scan_table.removeRow(row_num)
+            del self.coordinate_list[row_num]
+            self.table_index = self.table_index - 1
 
         return
 
@@ -208,18 +243,21 @@ class ScriptWidget(QWidget):
         num_rows = self.scan_table.rowCount()
         for row in range(self.table_index + 1):
             try:
-                x_width_list.append(self.scan_table.item(row, 1).text())
-                y_width_list.append(self.scan_table.item(row, 3).text())
-                x_step_list.append(self.scan_table.item(row, 2).text())
-                y_step_list.append(self.scan_table.item(row, 4).text())
-                dwell_list.append(self.scan_table.item(row, 5).text())
+                x_width_list.append(self.scan_table.item(row, 4).text())
+                y_width_list.append(self.scan_table.item(row, 5).text())
+                x_step_list.append(self.scan_table.item(row, 6).text())
+                y_step_list.append(self.scan_table.item(row, 7).text())
+                dwell_list.append(self.scan_table.item(row, 8).text())
             except TypeError:
                 return
+
+        use_theta = self.useThetaRadioButton.isChecked()
+        use_z = self.useZRadioButton.isChecked()
 
         with FlyScanScriptWriter() as writer:
             writer.set_template_file(template_name)
             writer.write_script(file_name, self.coordinate_list, x_width_list, y_width_list,
-                                x_step_list, y_step_list, dwell_list)
+                                x_step_list, y_step_list, dwell_list, use_theta, use_z)
             mask = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP | \
                    stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH
             writer.set_file_permissions(file_name, mask)
@@ -255,7 +293,12 @@ class ScriptWidget(QWidget):
         self.table_index = table_index
         self.coordinate_list.append(coordinates)
 
-        self.scan_table.setItem(self.table_index, 0, QTableWidgetItem("%.3f, %.3f, %.3f" %
-                                                                      (coordinates[4], coordinates[5], coordinates[2])))
+#        self.scan_table.setItem(self.table_index, 0, QTableWidgetItem("%.3f, %.3f, %.3f" %
+#                                                                      (coordinates[4], coordinates[5], coordinates[2])))
+        self.scan_table.setItem(self.table_index, 0, QTableWidgetItem("%.3f" % coordinates[4]))
+        self.scan_table.setItem(self.table_index, 1, QTableWidgetItem("%.3f" % coordinates[5]))
+        self.scan_table.setItem(self.table_index, 2, QTableWidgetItem("%.3f" % coordinates[2]))
+        self.scan_table.setItem(self.table_index, 3, QTableWidgetItem("%.3f" % coordinates[3]))
+
 
         return

@@ -38,6 +38,8 @@ POSSIBILITY OF SUCH DAMAGE.
 '''
 
 import sys
+import os
+import datetime
 try:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
@@ -60,6 +62,11 @@ class App(QWidget):
         self.height = 517
         self.layout = None
         self.table_index = 0  # This is the table row.
+        self.config_dir = None
+
+        config_param_dict = self.load_config_file()
+        self.config_dir = config_param_dict['config_dir']
+        self.pv_prefix = config_param_dict['pv_prefix']
 
         # Create variables for each tab
         self.tabs = None
@@ -73,29 +80,29 @@ class App(QWidget):
         self.loadConfigButton = None
         self.saveConfigButton = None
 
-        self.init_ui()
+        self.init_ui(config_param_dict)
 
         return
 
-    def init_ui(self):
+    def init_ui(self, config_dict):
+
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
         self.tabs = QTabWidget()
 
-        self.table_tab = CoordinatesWidget(self)
+        self.table_tab = CoordinatesWidget(self, self.pv_prefix)
         self.file_tab = ScriptWidget(self)
         self.run_tab = RunWidget(self)
-
-#        self.tabs.addTab(self.table_tab, "Table")
-#        self.tabs.addTab(self.file_tab, "File")
-#        self.tabs.addTab(self.run_tab, "Run")
 
         # Create all of the gui widgets.
         self.create_buttons()
 
         # Place the widgets on the window.
         self.create_layout()
+
+        # Put values from the loaded configuration file into the widgets.
+        self.set_default_values(config_dict)
 
         # Show widgets
         self.show()
@@ -104,7 +111,7 @@ class App(QWidget):
 
     def create_buttons(self):
 
-        # Create two buttons and assign functions to the click event
+        # Create four buttons and assign functions to the click event
 
         self.clearTableButton = QPushButton("Clear Table")
         self.clearTableButton.setStyleSheet('background-color: yellow')
@@ -158,6 +165,20 @@ class App(QWidget):
 
         return
 
+    def set_default_values(self, config_dict):
+
+        self.table_tab.useTextValuesRadioButton.setChecked(config_dict['use_text_values'])
+        self.table_tab.usePVValuesRadioButton.setChecked(config_dict['use_pv_values'])
+        self.table_tab.textT.setText(config_dict['theta'])
+        self.file_tab.useThetaCheckBox.setChecked(config_dict['use_theta'])
+        self.file_tab.useZCheckBox.setChecked(config_dict['use_z'])
+        self.file_tab.text_template.setText(config_dict['template'])
+        self.file_tab.text_path.setText(config_dict['script_path'])
+        self.file_tab.text_file.setText(config_dict['script_name'])
+        self.file_tab.log_file.setText(config_dict['log_name'])
+
+        return
+
     # Clear all entries from both tables
     @pyqtSlot()
     def on_clear_table_button_click(self):
@@ -180,10 +201,60 @@ class App(QWidget):
     @pyqtSlot()
     def on_load_config_button_clicked(self):
 
+        config_param_dict = self.load_config_file()
+
+        self.config_dir = config_param_dict['config_dir']
+        self.pv_prefix = config_param_dict['pv_prefix']
+
+        self.set_default_values(config_param_dict)
+
         return
 
     @pyqtSlot()
     def on_save_config_button_clicked(self):
+
+        file_name = QFileDialog.getSaveFileName(parent=self,caption='Save Config File',directory=self.config_dir)
+        self.config_dir = os.path.dirname(file_name[0])
+        try:
+            with open(file_name[0], 'w') as config_file:
+                # Put some comments in the file.
+                config_file.write('Here is the structure of this file:\n')
+                config_file.write('     The date and time the file was written.\n')
+                config_file.write('     The directory that this file is in.\n')
+                config_file.write('     The prefix of coordinate system PVs.\n')
+                config_file.write('     Use stage positions entered manually? True/False\n')
+                config_file.write('     Use stage positions from PV values? True/False\n')
+                config_file.write('     The default theta position.\n')
+                config_file.write('     Use the theta angle in the scan? True/False\n')
+                config_file.write('     Use the Z value in the scan? True/False\n')
+                config_file.write('     The path to the scan script template.\n')
+                config_file.write('     The path to use for saving the scan script and log file.\n')
+                config_file.write('     The name of the scan script file.\n')
+                config_file.write('     The name of the log file.\n')
+                # Write the current date and time.
+                config_file.write('{}\n'.format(datetime.datetime.now()))
+                # Write the save directory
+                config_file.write('{}\n'.format(self.config_dir))
+                # Write the PV prefix
+                config_file.write('{}\n'.format(self.pv_prefix))
+                # Write the from the coordinate table tab.
+                config_file.write('{}\n'.format(str(self.table_tab.useTextValuesRadioButton.isChecked())))
+                config_file.write('{}\n'.format(str(self.table_tab.usePVValuesRadioButton.isChecked())))
+                config_file.write('{}\n'.format(self.table_tab.textT.text()))
+                # Write values from the create scan tab
+                config_file.write('{}\n'.format(str(self.file_tab.useThetaCheckBox.isChecked())))
+                config_file.write('{}\n'.format(str(self.file_tab.useZCheckBox.isChecked())))
+                config_file.write('{}\n'.format(self.file_tab.text_template.text()))
+                config_file.write('{}\n'.format(self.file_tab.text_path.text()))
+                config_file.write('{}\n'.format(self.file_tab.text_file.text()))
+                config_file.write('{}\n'.format(self.file_tab.log_file.text()))
+
+        except IOError as e:
+            print(e)
+            return
+        except FileNotFoundError as e:
+            print(e)
+            return
 
         return
 
@@ -193,6 +264,67 @@ class App(QWidget):
 
         return
 
+    def load_config_file(self):
+
+        file_name = QFileDialog.getOpenFileName(parent=self,caption='Load Config File',directory=self.config_dir)
+
+        config_dict = {}
+
+        try:
+            with open(file_name[0], 'r') as config_file:
+
+                for i in range(14):
+                    line = config_file.readline()
+
+                line = config_file.readline()
+                config_dict['config_dir'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['pv_prefix'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['use_text_values'] = self.string_to_bool(line.rstrip('\n'))
+
+                line = config_file.readline()
+                config_dict['use_pv_values'] = self.string_to_bool(line.rstrip('\n'))
+
+                line = config_file.readline()
+                config_dict['theta'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['use_theta'] = self.string_to_bool(line.rstrip('\n'))
+
+                line = config_file.readline()
+                config_dict['use_z'] = self.string_to_bool(line.rstrip('\n'))
+
+                line = config_file.readline()
+                config_dict['template'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['script_path'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['script_name'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['log_name'] = line.rstrip('\n')
+
+        except IOError as e:
+            print(e)
+            return
+        except FileNotFoundError as e:
+            print(e)
+            return
+
+        return config_dict
+
+    def string_to_bool(self,value):
+        if value == 'True':
+            return True
+        elif value == 'False':
+            return False
+        else:
+            raise ValueError
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

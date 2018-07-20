@@ -50,14 +50,14 @@ except ImportError:
 
 
 class CoordinatesWidget(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, prefix='9idbTAU:'):
         super(CoordinatesWidget, self).__init__()
 
         self.parent = parent
 
         self.table_index = 0  # This is the table row.
         self.coordinate_list = []
-        self.xzt_transform = XZT_Transform('9idbTAU:')
+        self.xzt_transform = XZT_Transform(prefix)
 
         # Create text labels and text boxes for Coordinates
         self.labelX = QLabel('X Coordinate (um)')

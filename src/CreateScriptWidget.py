@@ -100,16 +100,10 @@ class ScriptWidget(QWidget):
         self.createScriptButton.setToolTip('Generate the scan script using entered parameters.')
         self.createScriptButton.clicked.connect(self.on_create_script_button_click)
 
-#        self.printScanButton = QPushButton('Print Scan')
-#        self.printScanButton.setStyleSheet('background-color: yellow')
-#        self.printScanButton.setMaximumSize(200, 25)
-#        self.printScanButton.setToolTip('Print the scan table.')
-#        self.printScanButton.clicked.connect(self.on_print_scan_button_click)
-
-        self.useThetaRadioButton = QCheckBox('Create a tomo scan.', self)
-        self.useThetaRadioButton.setToolTip('Check if creating a tomography scan')
-        self.useZRadioButton = QCheckBox('Include Z values.', self)
-        self.useZRadioButton.setToolTip('Check if Z position values should be in the scan.')
+        self.useThetaCheckBox = QCheckBox('Create a tomo scan.', self)
+        self.useThetaCheckBox.setToolTip('Check if creating a tomography scan')
+        self.useZCheckBox = QCheckBox('Include Z values.', self)
+        self.useZCheckBox.setToolTip('Check if Z position values should be in the scan.')
 
         self.scan_table = QTableWidget()
         self.scan_table.setRowCount(10)
@@ -150,8 +144,8 @@ class ScriptWidget(QWidget):
         button_hbox.addWidget(self.createScriptButton, alignment=Qt.AlignCenter)
 
         radio_vbox = QVBoxLayout()
-        radio_vbox.addWidget(self.useThetaRadioButton, alignment=Qt.AlignCenter)
-        radio_vbox.addWidget(self.useZRadioButton, alignment=Qt.AlignCenter)
+        radio_vbox.addWidget(self.useThetaCheckBox, alignment=Qt.AlignCenter)
+        radio_vbox.addWidget(self.useZCheckBox, alignment=Qt.AlignCenter)
 
         hbox = QHBoxLayout()
         hbox.addLayout(button_hbox)
@@ -160,8 +154,6 @@ class ScriptWidget(QWidget):
 
         file_tab_vbox = QVBoxLayout()
         file_tab_vbox.addWidget(self.scan_table)
-#        file_tab_vbox.addLayout(file_tab_form_layout)
-#        file_tab_vbox.addLayout(button_hbox)
         file_tab_vbox.addLayout(hbox)
         self.setLayout(file_tab_vbox)
 
@@ -251,8 +243,8 @@ class ScriptWidget(QWidget):
             except TypeError:
                 return
 
-        use_theta = self.useThetaRadioButton.isChecked()
-        use_z = self.useZRadioButton.isChecked()
+        use_theta = self.useThetaCheckBox.isChecked()
+        use_z = self.useZCheckBox.isChecked()
 
         with FlyScanScriptWriter() as writer:
             writer.set_template_file(template_name)
@@ -293,8 +285,6 @@ class ScriptWidget(QWidget):
         self.table_index = table_index
         self.coordinate_list.append(coordinates)
 
-#        self.scan_table.setItem(self.table_index, 0, QTableWidgetItem("%.3f, %.3f, %.3f" %
-#                                                                      (coordinates[4], coordinates[5], coordinates[2])))
         self.scan_table.setItem(self.table_index, 0, QTableWidgetItem("%.3f" % coordinates[4]))
         self.scan_table.setItem(self.table_index, 1, QTableWidgetItem("%.3f" % coordinates[5]))
         self.scan_table.setItem(self.table_index, 2, QTableWidgetItem("%.3f" % coordinates[2]))

@@ -50,6 +50,7 @@ except ImportError:
 from RunWidget import RunWidget
 from CreateCoordinatesWidget import CoordinatesWidget
 from CreateScriptWidget import ScriptWidget
+from CoarseScanWidget import CoarseScanWidget
 
 
 class App(QWidget):
@@ -73,6 +74,7 @@ class App(QWidget):
         self.table_tab = None
         self.file_tab = None
         self.run_tab = None
+        self.coarse_scan_tab = None
 
         # Create variables for two buttons
         self.clearTableButton = None
@@ -94,6 +96,7 @@ class App(QWidget):
         self.table_tab = CoordinatesWidget(self, self.pv_prefix)
         self.file_tab = ScriptWidget(self)
         self.run_tab = RunWidget(self)
+        self.coarse_scan_tab = CoarseScanWidget(self)
 
         # Create all of the gui widgets.
         self.create_buttons()
@@ -138,9 +141,10 @@ class App(QWidget):
     def create_layout(self):
 
         # Add widgets to each tab
-        self.tabs.addTab(self.table_tab, "Coordinates")
-        self.tabs.addTab(self.file_tab, "Create Script")
-        self.tabs.addTab(self.run_tab, "Run Script")
+        self.tabs.addTab(self.table_tab, 'Coordinates')
+        self.tabs.addTab(self.coarse_scan_tab, 'Coarse Scans')
+        self.tabs.addTab(self.file_tab, 'Create Script')
+        self.tabs.addTab(self.run_tab, 'Run Script')
 
         # Create vertical layouts for the buttons
         button_vbox1 = QVBoxLayout()
@@ -176,6 +180,10 @@ class App(QWidget):
         self.file_tab.text_path.setText(config_dict['script_path'])
         self.file_tab.text_file.setText(config_dict['script_name'])
         self.file_tab.log_file.setText(config_dict['log_name'])
+        self.coarse_scan_tab.text_stage_pv.setText(config_dict['stage_pv'])
+        self.coarse_scan_tab.text_theta.setText(config_dict['theta'])
+        self.coarse_scan_tab.text_element.setText(config_dict['element'])
+        self.coarse_scan_tab.text_coefficient.setText(config_dict['coefficient'])
 
         return
 
@@ -231,6 +239,10 @@ class App(QWidget):
                 config_file.write('     The path to use for saving the scan script and log file.\n')
                 config_file.write('     The name of the scan script file.\n')
                 config_file.write('     The name of the log file.\n')
+                config_file.write('     The PV for the sample rotation stage position.\n')
+                config_file.write('     The change in angle between 2D scans.\n')
+                config_file.write('     The element to use from coarse tomo scans.\n')
+                config_file.write('     The scaling parameter for finding sample boundaries.\n')
                 # Write the current date and time.
                 config_file.write('{}\n'.format(datetime.datetime.now()))
                 # Write the save directory
@@ -241,13 +253,18 @@ class App(QWidget):
                 config_file.write('{}\n'.format(str(self.table_tab.useTextValuesRadioButton.isChecked())))
                 config_file.write('{}\n'.format(str(self.table_tab.usePVValuesRadioButton.isChecked())))
                 config_file.write('{}\n'.format(self.table_tab.textT.text()))
-                # Write values from the create scan tab
+                # Write values from the create scan tab.
                 config_file.write('{}\n'.format(str(self.file_tab.useThetaCheckBox.isChecked())))
                 config_file.write('{}\n'.format(str(self.file_tab.useZCheckBox.isChecked())))
                 config_file.write('{}\n'.format(self.file_tab.text_template.text()))
                 config_file.write('{}\n'.format(self.file_tab.text_path.text()))
                 config_file.write('{}\n'.format(self.file_tab.text_file.text()))
                 config_file.write('{}\n'.format(self.file_tab.log_file.text()))
+                # Write values from the coarse scan tab.
+                config_file.write('{}\n'.format(self.coarse_scan_tab.text_stage_pv.text()))
+                config_file.write('{}\n'.format(self.coarse_scan_tab.text_theta.text()))
+                config_file.write('{}\n'.format(self.coarse_scan_tab.text_element.text()))
+                config_file.write('{}\n'.format(self.coarse_scan_tab.text_coefficient.text()))
 
         except IOError as e:
             print(e)
@@ -273,7 +290,7 @@ class App(QWidget):
         try:
             with open(file_name[0], 'r') as config_file:
 
-                for i in range(14):
+                for i in range(18):
                     line = config_file.readline()
 
                 line = config_file.readline()
@@ -308,6 +325,18 @@ class App(QWidget):
 
                 line = config_file.readline()
                 config_dict['log_name'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['stage_pv'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['theta'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['element'] = line.rstrip('\n')
+
+                line = config_file.readline()
+                config_dict['coefficient'] = line.rstrip('\n')
 
         except IOError as e:
             print(e)

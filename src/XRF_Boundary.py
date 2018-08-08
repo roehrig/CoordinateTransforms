@@ -3,7 +3,7 @@ import sys
 import h5py
 import numpy as np
 import string
-#from PIL import Image
+# from PIL import Image
 from matplotlib import pyplot as plt
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -16,12 +16,13 @@ class XRFBoundary(object):
     def __init__(self):
 
         self.file_names = {}
-        self.theta = []
-        self.hdf_files = []
+        self.theta = []             # A list of rotation stage positions from the scan.
+        self.hdf_files = []         # A list of hdf5 files that make up the scan data.
         self.element = None
         self.element_index = 0
         self.element_list = []
         self.bounds = {}
+        self.bounds_positions = []
         self.padding = {}
         self.projections = []
 
@@ -62,6 +63,8 @@ class XRFBoundary(object):
             for item in data_set:
                 # Data is stored in a binary format.  It must be decoded to get a string.
                 item_string = item.decode('ascii')
+                # If the stage pv is found in the file, append the pv value to a list.
+                # Here that value is the rotation stage angle for the scan.
                 if stage_pv in item_string:
                     index = item_string.rfind(',')
                     theta_temp = round(float(item_string[index + 1:]))
@@ -136,103 +139,149 @@ class XRFBoundary(object):
         bounds[3] = np.zeros(theta_array_length)  # y bottom edge
         bounds[4] = self.theta
 
-        for i in range(0, len(self.theta)):
-            tmp = self.hdf_files[i]["MAPS"]["XRF_roi"][element_index]
-            if dimx <= len(tmp[0]):
-                dimx = len(tmp[0])
-            if dimy <= len(tmp):
-                dimy = len(tmp)
+        # This will go through each file and find the smallest values of width and height
+        # dimensions that will be large enough to fit any of the selected scan files.
+#        for i in range(theta_array_length):
+            # Creates a 2D array of dimension (number of lines) x (number of pixels)
+#            tmp = self.hdf_files[i]["MAPS"]["XRF_roi"][element_index]
+        tmp = self.hdf_files[0]["MAPS"]["XRF_roi"][element_index]
+#        if dimx <= len(tmp[0]):
+        dimx = len(tmp[0])
+#        if dimy <= len(tmp):
+        dimy = len(tmp)
 
-        for i in range(1, theta_array_length + 1):
-            projection = self.hdf_files[i - 1]["MAPS"]["XRF_roi"][element_index]
+        # This loop runs once for each scan angle.
+        for i in range(theta_array_length):
+            # This creates a variable whose value is equal to the scan data for the
+            # selected element.  Its dimensions are (scan rows) x (scan columns)
+            projection = self.hdf_files[i]["MAPS"]["XRF_roi"][element_index]
             roi_length = len(projection[0])
+            # This block happens if the scan is narrower than the widest scan found above.
             if roi_length <= dimx:
                 dx = dimx - roi_length
                 half_dx = int(dx / 2)
+                # Add zeros to the width of the scan data so that it is the same width as the widest image.
+                # The shape of the zeros is (scan rows) high x (half the missing width) wide.
+                # The first line adds zeros to the left side, the second line adds zeros to the right side.
                 projection = np.append(projection, np.zeros((len(projection), half_dx)), axis=1)
                 projection = np.append(np.zeros((len(projection), half_dx + dx % 2)), projection, axis=1)
+                # Keep track of the number zeros added to each side of the image.
                 padding[0].append(half_dx)
                 padding[1].append(half_dx + dx % 2)
-
+            # This block happens if the scan is shorter than the tallest scan found above.
             if len(projection) <= dimy:
                 dy = dimy - len(projection)
                 half_dy = int(dy / 2)
+                # Add zeros to the height of the scan data so that it is the same height as the tallest image.
+                # The shape of the zeros is (half the missing height) high x (scan columns) wide.
+                # The first line adds zeros to the top, the second line adds zeros to the bottom.
                 projection = np.append(np.zeros((half_dy, roi_length)), projection, axis=0)
                 projection = np.append(projection, np.zeros((half_dy + dy % 2, roi_length)), axis=0)
+                # Keep track of the number zeros added to the top and bottom of the image.
                 padding[2].append(half_dy)
                 padding[3].append(half_dy + dy % 2)
             proj.append(projection)
 
         '''uses h5py for data handling, sort based on proj angle '''
         cnt = 0
+
+        # This block loops once for each scan angle.
+        # The loops counts over an array of indices that represent the
+        # self.theta list in sorted order by angle.
         for i in np.argsort(self.theta):
             cnt = cnt + 1
-            projections = np.nan_to_num(proj[i])
+#            projections = np.nan_to_num(proj[i])
+            # Replace all values of NaN with a zero.
+            projections = np.nan_to_num(self.hdf_files[i]["MAPS"]["XRF_roi"][element_index])
+            # Create two arrays of the x and y positions from the scan.
             xPos = self.hdf_files[i]["MAPS"]["x_axis"][:]
             yPos = self.hdf_files[i]["MAPS"]["y_axis"][:]
 
             '''	calculate background noise/coeff, edges, width, and center'''
-            columnsums = np.sum(projections, axis=0) / (dimy - padding[2][i] - padding[3][i])
-            rowsums = np.sum(projections, axis=1) / (dimx - padding[0][i] - padding[1][i])
+#            columnsums = np.sum(projections, axis=0) / (dimy - padding[2][i] - padding[3][i])
+            # Create an array where each element is a sum of a column in the scan data.
+            # It will be a 1D array of size equal to the number of columns.
+            columnsums = np.sum(projections, axis=0) / dimy
+#            rowsums = np.sum(projections, axis=1) / (dimx - padding[0][i] - padding[1][i])
+            # Create an array where each element is a sum of a row in the scan data.
+            # It will be a 1D array of size equal to the number of rows.
+            rowsums = np.sum(projections, axis=1) / dimx
+            # Find the mean of the first two elements of the sum of columns.
             noise = np.mean(np.sort(columnsums[columnsums > 0])[:2])
 
+            scale_factor = coefficient / 100
+
+            # Create an array that is the columnsort array in reverse order.
             tmpcol = np.sort(columnsums)[::-1]
+            # Find the mean of the first two elements of the tmpcol array.
             upperThreshCol = np.mean(tmpcol[:2])
             diffcol = upperThreshCol - noise
-            scale_factor = int(coefficient / 100)
             threshcol = diffcol * scale_factor + noise
 
+            # Create an array that is the rowsort array in reverse order.
             tmprow = np.sort(rowsums)[::-1]
+            # Find the mean of the first two elements of the tmprow array.
             upperThreshRow = np.mean(tmprow[:2])
             diffrow = upperThreshRow - noise
             threshrow = diffrow * scale_factor + noise
 
-            # find left edge
+            print(noise, upperThreshCol, diffcol, threshcol, upperThreshRow, diffrow, threshrow)
+
+            # Find left edge of the image.
             for j in range(len(columnsums)):
+                # Create an array that is a sorted column of data
                 var = np.sort(projections[:, j])[::-1]
+                # Find the maximum value in the column.
                 px1 = np.max(projections[:, j])
                 if columnsums[j] > threshcol:
-                    boundx1 = j - padding[0][i]
-                    bounds[0][i] = boundx1
+                    left_boundary = j - padding[0][i]
+#                    left_boundary = j
+                    # Save the column index for the left boundary of the image.
+                    bounds[0][i] = left_boundary
                     break
-            # find right edge
+            # Find right edge image.
             for k in range(len(columnsums)):
                 px2 = np.max(projections[:, -k - 1])
                 if columnsums[len(columnsums) - k - 1] > threshcol:
-                    boundx2 = len(columnsums) - k - 1 - padding[1][i]
-                    bounds[1][i] = boundx2
+                    right_boundary = len(columnsums) - k - 1 - padding[1][i]
+#                    right_boundary = len(columnsums) - k - 1
+                    # Save the column index of the right boundary of the image.
+                    bounds[1][i] = right_boundary
                     break
-            # find top edge
+            # Find top edge of the image.
             for l in range(len(rowsums)):
                 px3 = np.max(projections[l, :])
                 if rowsums[l] > threshrow:
-                    boundy1 = l - padding[2][i]
-                    bounds[2][i] = boundy1
+                    top_boundary = l - padding[2][i]
+#                    top_boundary = l
+                    bounds[2][i] = top_boundary
                     break
-            # find bottom edge
+            # Find bottom edge of the image.
             for m in range(len(rowsums)):
                 px4 = np.max(projections[-m - 1, :])
                 if rowsums[len(rowsums) - m - 1] > threshrow:
-                    boundy2 = len(rowsums) - m - 1 - padding[3][i]
-                    bounds[3][i] = boundy2
+                    bottom_boundary = len(rowsums) - m - 1 - padding[3][i]
+#                    bottom_boundary = len(rowsums) - m - 1
+                    bounds[3][i] = bottom_boundary
                     break
 
             # boundary points
-            x_left = round(xPos[boundx1], 4)
-            x_right = round(xPos[boundx2], 4)
+            x_left = round(xPos[left_boundary], 4)
+            x_right = round(xPos[right_boundary], 4)
             x_center = round((x_right + x_left) / 2, 4)
             x_width = round(x_right - x_left, 4)
-            y_top = round(yPos[boundy1], 4)
-            y_bottom = round(yPos[boundy2], 4)
+            y_top = round(yPos[top_boundary], 4)
+            y_bottom = round(yPos[bottom_boundary], 4)
             y_center = round((y_top + y_bottom) / 2, 4)
             y_width = round(y_bottom - y_top, 4)
             xpostemp = list([self.theta[i], x_center, x_width, y_center, y_width])
-            xy_bounds.append(xpostemp)
+#            xy_bounds.append(xpostemp)
+            self.bounds_positions.append(xpostemp)
 
         '''creates and writes to file'''
         outPos = open('xyBounds.txt', 'w')
         outPos.write('angle x_center x_width y_center y_width \n')
-        for i in xy_bounds:
+        for i in self.bounds_positions:
             outPos.write(str(i)[1:-1])
             outPos.write('\n')
         outPos.close()
@@ -305,9 +354,11 @@ class XRFBoundary(object):
                 if frames * (j - 1) < counter <= frames * j:
                     # plt.imsave(str(fileNames[1][i])+'.tiff', projection,cmap='gray')
                     plt.imshow(projection, interpolation='nearest')
-                    rect = patches.Rectangle(((self.bounds[0][i] + self.padding[0][i]), self.bounds[2][i] +
-                                               self.padding[2][i]), boxWidth[i], boxheight[i], linewidth=2,
-                                               edgecolor='r', facecolor='none')
+#                    rect = patches.Rectangle(((self.bounds[0][i] + self.padding[0][i]), self.bounds[2][i] +
+#                                               self.padding[2][i]), boxWidth[i], boxheight[i], linewidth=2,
+#                                               edgecolor='r', facecolor='none')
+                    rect = patches.Rectangle((self.bounds[0][i], self.bounds[2][i]), boxWidth[i], boxheight[i],
+                                              linewidth=2, edgecolor='r', facecolor='none')
                     ax.add_patch(rect)
                     plt.axis('off')
                     plt.tight_layout()

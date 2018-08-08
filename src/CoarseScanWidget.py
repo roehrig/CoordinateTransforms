@@ -211,7 +211,7 @@ class CoarseScanWidget(QWidget):
 
         element_index = self.scan_boundary.get_element_index(element)
 
-        self.scan_boundary.calc_xy_bounds(self.file_path, coefficient, stage_pv, element_index)
+        self.scan_boundary.calc_xy_bounds(coefficient, element_index)
 
         return
 

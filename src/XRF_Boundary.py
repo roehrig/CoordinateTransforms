@@ -57,7 +57,6 @@ class XRFBoundary(object):
         self.element_list = []
         self.bounds = {}
         self.bounds_positions = []
-        self.padding = {}
         self.projections = []
 
         return
@@ -79,36 +78,32 @@ class XRFBoundary(object):
 
         # Create a list of files in the given directory
         file_names = {}
-        file_names[0], file_names[1], theta_index, hdf_files = [], [], [], []
+        file_names[0], file_names[1], theta_array, hdf_files = [], [], [], []
+
+        # Encode the stage_pv value into binary format.
+        byte_stage_pv = stage_pv.encode('ascii')
 
         # Iterate through each file in the list
         for file in files:
             # If the file has the extension .h5, add the file name to a list and add
             # the file name with full path to another list.
             if file.endswith('.h5'):
+                full_path = os.path.join(path, file)
                 file_names[0].append(file)
-                file_names[1].append(os.path.join(path, file))
-
-        # Iterate through each .h5 file.
-        for i in range(0, len(file_names[1])):
-            # Create a File object for each file, make it read only.
-            temp_file = h5py.File(os.path.abspath(file_names[1][i]), 'r')
-            hdf_files.append(temp_file)
-            # Search for the angle of the sample stage for this data set.
-            # Add that value to an array.
-            data_set = temp_file['MAPS']['extra_pvs_as_csv']
-            for item in data_set:
-                # Data is stored in a binary format.  It must be decoded to get a string.
-                item_string = item.decode('ascii')
-                # If the stage pv is found in the file, append the pv value to a list.
-                # Here that value is the rotation stage angle for the scan.
-                if stage_pv in item_string:
-                    index = item_string.rfind(',')
-                    theta_temp = round(float(item_string[index + 1:]))
-                    theta_index = np.append(theta_index, theta_temp)
+                file_names[1].append(full_path)
+                # Create a File object for each file, make it read only.
+                temp_file = h5py.File(full_path, 'r')
+                hdf_files.append(temp_file)
+                # Search for the angle of the sample stage for this data set.
+                # Add that value to an array.
+                data_set = temp_file['MAPS']['extra_pvs']
+                pv_index = np.where(data_set[0]==byte_stage_pv)
+                if len(pv_index[0]) > 0:
+                    theta = float(data_set[1][pv_index[0][0]])
+                    theta_array = np.append(theta_array, theta)
 
         self.file_names = file_names
-        self.theta = theta_index
+        self.theta = theta_array
         self.hdf_files = hdf_files
 
         return
@@ -139,15 +134,45 @@ class XRFBoundary(object):
         return self.element_list
 
     def get_element_index(self, element):
+        """
+        This function will find the position in the list of channel names saved in the hdf file that
+        corresponds to the desired element and return that value.
+
+        :param element: The element to find.
+        :type  element: str
+        :return:
+        """
+
         elem_list = list(self.hdf_files[0]['MAPS']['channel_names'][:])
         elem_index = elem_list.index(element.encode('ascii'))
+
         return elem_index
+
+    def get_hdf_file_list(self):
+        """
+        This function returns the list of hdf file objects.
+
+        :return:
+        """
+
+        return self.hdf_files
+
+    def get_image_boundaries(self):
+        """
+        This function returns the 2 dimensional list of boundary positions and the corresponding rotation stage
+        position.
+
+        :return:
+        """
+
+        return self.bounds_positions
 
     def calc_xy_bounds(self, coefficient, element_index):
 
         """
         This function will find the outer boundaries of the sample in each of the scan files that are selected by the
         user.
+
         :param coefficient:
         :type  coefficient: int
         :param element_index:
@@ -168,7 +193,6 @@ class XRFBoundary(object):
         dim_x = len(tmp[0])
         dim_y = len(tmp)
 
-        '''uses h5py for data handling, sort based on proj angle '''
         count = 0
 
         # This block loops once for each scan angle.
@@ -177,18 +201,20 @@ class XRFBoundary(object):
         for i in np.argsort(self.theta):
             count = count + 1
             # Replace all values of NaN with a zero.
-            projections = np.nan_to_num(self.hdf_files[i]["MAPS"]["XRF_roi"][element_index])
+            projection = np.nan_to_num(self.hdf_files[i]["MAPS"]["XRF_roi"][element_index])
+            self.projections.append(projection)
             # Create two arrays of the x and y positions from the scan.
             x_positions = self.hdf_files[i]["MAPS"]["x_axis"][:]
             y_positions = self.hdf_files[i]["MAPS"]["y_axis"][:]
 
-            '''	calculate background noise/coeff, edges, width, and center'''
+            # Calculate background noise/coeff, edges, width, and center
+
             # Create an array where each element is a sum of a column in the scan data.
             # It will be a 1D array of size equal to the number of columns.
-            column_sums = np.sum(projections, axis=0) / dim_y
+            column_sums = np.sum(projection, axis=0) / dim_y
             # Create an array where each element is a sum of a row in the scan data.
             # It will be a 1D array of size equal to the number of rows.
-            row_sums = np.sum(projections, axis=1) / dim_x
+            row_sums = np.sum(projection, axis=1) / dim_x
             # Find the mean of the first two elements of the sum of columns.
             noise = np.mean(np.sort(column_sums[column_sums > 0])[:2])
 
@@ -252,7 +278,7 @@ class XRFBoundary(object):
             x_pos_temp = list([self.theta[i], x_center, x_width, y_center, y_width])
             self.bounds_positions.append(x_pos_temp)
 
-        '''creates and writes to file'''
+        # Creates and writes to file
         out_pos = open('xyBounds.txt', 'w')
         out_pos.write('angle x_center x_width y_center y_width \n')
         format_string = '{angle:.3f}, {x_center:.3f}, {x_width:.3f}, {y_center:.3f}, {y_width:.3f},\n'
@@ -294,7 +320,7 @@ class XRFBoundary(object):
         box_height = list(np.array(self.bounds[3]) - np.array(self.bounds[2]))
         theta = np.sort(self.theta)
 
-        '''create new window for every 30 images, applies bounding box'''
+        # Create new window for every 30 images, applies bounding box
         frames = 5 * 6
         figs = {}
         counter = 0
@@ -303,7 +329,7 @@ class XRFBoundary(object):
             projection = self.projections[i]
             for j in range(int(len(theta) / frames) + (len(theta) % frames > 0)):
                 j = j + 1
-                ax = plt.subplot(5, 6, counter - ((counter - 1) / frames) * frames)
+                ax = plt.subplot(5, 6, counter - (int((counter - 1) / frames)) * frames)
                 if counter == (j - 1) * frames:
                     figs['fig{}'.format(j)] = plt.subplots(1)
                 if frames * (j - 1) < counter <= frames * j:

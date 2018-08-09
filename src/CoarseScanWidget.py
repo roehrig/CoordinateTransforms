@@ -84,16 +84,28 @@ class CoarseScanWidget(QWidget):
         # Enable selection of multiple files.
         self.list_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
+        self.select_files_button = QPushButton('Select Files')
+        self.select_files_button.setStyleSheet('background-color: yellow')
+        self.select_files_button.setMaximumSize(200, 25)
+        self.select_files_button.setToolTip('Save the list of selected files.')
+        self.select_files_button.clicked.connect(self.on_select_files_button_click)
+
         self.select_element_button = QPushButton('Select Element')
         self.select_element_button.setStyleSheet('background-color: yellow')
         self.select_element_button.setMaximumSize(200, 25)
         self.select_element_button.setToolTip('Open a window to select an element.')
         self.select_element_button.clicked.connect(self.on_select_element_button_click)
 
+        self.find_bounds_button = QPushButton('Find Bounds')
+        self.find_bounds_button.setStyleSheet('background-color: yellow')
+        self.find_bounds_button.setMaximumSize(200, 25)
+        self.find_bounds_button.setToolTip('Find the values of the image boundaries for each file.')
+        self.find_bounds_button.clicked.connect(self.on_find_bounds_button_click)
+
         self.build_scan_button = QPushButton('Build Scan')
         self.build_scan_button.setStyleSheet('background-color: yellow')
         self.build_scan_button.setMaximumSize(200, 25)
-        self.build_scan_button.setToolTip('Calculate fine scan boundaries.')
+        self.build_scan_button.setToolTip('Calculate build scan parameters from boundaries.')
         self.build_scan_button.clicked.connect(self.on_build_scan_button_click)
 
         self.show_plots_button = QPushButton('Show Plots')
@@ -127,24 +139,36 @@ class CoarseScanWidget(QWidget):
         self.text_stage_pv.setMinimumWidth(80)
         self.text_stage_pv.setMaximumSize(100, 20)
 
-        button_vbox = QVBoxLayout()
-        button_vbox.addWidget(self.select_element_button)
-        button_vbox.addWidget(self.build_scan_button)
-        button_vbox.addWidget(self.show_plots_button)
+        self.text_num_files = QLineEdit()
+        self.text_num_files.setReadOnly(True)
+        self.text_num_files.setMinimumWidth(80)
+        self.text_num_files.setMaximumSize(200, 20)
+        self.text_num_files.setText('0 Files Selected')
 
-        text_form_layout = QFormLayout()
-        text_form_layout.addRow(self.label_element, self.text_element)
-        text_form_layout.addRow(self.label_coefficient, self.text_coefficient)
-        text_form_layout.addRow(self.label_theta, self.text_theta)
-        text_form_layout.addRow(self.label_stage_pv, self.text_stage_pv)
+        self.select_element_button.setDisabled(True)
+        self.find_bounds_button.setDisabled(True)
+        self.show_plots_button.setDisabled(True)
+        self.build_scan_button.setDisabled(True)
 
-        hbox = QHBoxLayout()
-        hbox.addLayout(button_vbox)
-        hbox.addLayout(text_form_layout)
+        grid_layout = QGridLayout()
+        grid_layout.addWidget(self.select_files_button, 0, 0)
+        grid_layout.addWidget(self.select_element_button, 1, 0)
+        grid_layout.addWidget(self.find_bounds_button, 2, 0)
+        grid_layout.addWidget(self.text_num_files, 0, 1)
+        grid_layout.addWidget(self.show_plots_button, 1, 1)
+        grid_layout.addWidget(self.build_scan_button, 2, 1)
+        grid_layout.addWidget(self.label_element, 0, 2)
+        grid_layout.addWidget(self.label_coefficient, 1, 2)
+        grid_layout.addWidget(self.label_theta, 2, 2)
+        grid_layout.addWidget(self.label_stage_pv, 3, 2)
+        grid_layout.addWidget(self.text_element, 0, 3)
+        grid_layout.addWidget(self.text_coefficient, 1, 3)
+        grid_layout.addWidget(self.text_theta, 2, 3)
+        grid_layout.addWidget(self.text_stage_pv, 3, 3)
 
         widget_layout = QVBoxLayout()
         widget_layout.addLayout(files_hbox)
-        widget_layout.addLayout(hbox)
+        widget_layout.addLayout(grid_layout)
 
         self.setLayout(widget_layout)
 
@@ -174,7 +198,7 @@ class CoarseScanWidget(QWidget):
 
         return
 
-    def on_select_element_button_click(self):
+    def on_select_files_button_click(self):
 
         stage_pv = self.text_stage_pv.text()
 
@@ -192,26 +216,41 @@ class CoarseScanWidget(QWidget):
             return
         else:
             self.scan_boundary.open_files(self.file_path, self.file_list, stage_pv)
-            self.scan_boundary.create_element_list()
-            elem_list = self.scan_boundary.get_element_list()
-            elem_dialog = QMessageBoxWithCheckBox(elem_list)
-            ret_val, elem_dict = elem_dialog.exec_()
+            self.select_element_button.setDisabled(False)
+            num_files = len(self.scan_boundary.get_hdf_file_list())
+            self.text_num_files.setText('{} Files Selected'.format(num_files))
 
-            for key, value in elem_dict.items():
-                if value.isChecked():
-                    self.text_element.setText(key)
+        return
+
+    def on_select_element_button_click(self):
+
+        self.scan_boundary.create_element_list()
+        elem_list = self.scan_boundary.get_element_list()
+        elem_dialog = QMessageBoxWithCheckBox(elem_list)
+        ret_val, elem_dict = elem_dialog.exec_()
+
+        for key, value in elem_dict.items():
+            if value.isChecked():
+                self.text_element.setText(key)
+                self.find_bounds_button.setDisabled(False)
+
+        return
+
+    def on_find_bounds_button_click(self):
+
+        coefficient = int(self.text_coefficient.text())
+        element = self.text_element.text()
+        element_index = self.scan_boundary.get_element_index(element)
+        self.scan_boundary.calc_xy_bounds(coefficient, element_index)
+
+        self.show_plots_button.setDisabled(False)
+        self.build_scan_button.setDisabled(False)
 
         return
 
     def on_build_scan_button_click(self):
 
-        coefficient = int(self.text_coefficient.text())
-        element = self.text_element.text()
-        stage_pv = self.text_stage_pv.text()
-
-        element_index = self.scan_boundary.get_element_index(element)
-
-        self.scan_boundary.calc_xy_bounds(coefficient, element_index)
+        coarse_scans = self.scan_boundary.get_image_boundaries()
 
         return
 

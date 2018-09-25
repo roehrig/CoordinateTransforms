@@ -59,22 +59,23 @@ class QMessageBoxWithCheckBox(QMessageBox):
 
         list_length = len(box_list)
         sqrt_length = math.sqrt(list_length)
-
+        
         columns = math.ceil(sqrt_length)
-        rows = math.floor(sqrt_length)
+        rows = math.ceil(sqrt_length)
 
-        for i in range(columns):
-            for j in range(rows):
+        pos = []
+        for y in range(columns):
+            for x in range(rows):
+                pos.append((x+3,y))
 
-                if i * j < list_length:
-                    index = (i * columns) + j
-                    checkbox = QCheckBox()
-                    checkbox.setMinimumSize(80,20)
-                    checkbox.setText(box_list[index])
-                    checkbox_group.addButton(checkbox)
-                    self.element_dict[box_list[index]] = checkbox
-
-                    layout.addWidget(checkbox)
+        j = 0
+        for i in box_list:
+            checkbox = QCheckBox(i)
+            checkbox.setMinimumSize(60,20)
+            checkbox_group.addButton(checkbox)
+            self.element_dict[i] = checkbox
+            layout.addWidget(checkbox,pos[j][0],pos[j][1])
+            j = j+1
 
         return
 

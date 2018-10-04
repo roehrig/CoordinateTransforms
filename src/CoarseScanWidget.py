@@ -86,7 +86,7 @@ class CoarseScanWidget(QWidget):
 
         self.tree_view.setModel(self.dir_model)
 
-        self.tree_view.setRootIndex(self.dir_model.index(path))
+        self.tree_view.setRootIndex(self.dir_model.index('/'))
         self.tree_view.setColumnWidth(0,200)
 
         # Enable selection of multiple files.
@@ -307,12 +307,13 @@ class CoarseScanWidget(QWidget):
         self.x_pixel_size = self.text_x_size.text()
         self.y_pixel_size = self.text_y_size.text()
         self.dwell_time = self.text_dwell.text()
+        coordinate_list = []
 
         self.parent.file_tab.scan_table.setRowCount(len(self.scan_params))
         for i in range(len(self.scan_params)): #i is the row number
             self.parent.file_tab.scan_table.setItem(i,0,QTableWidgetItem(str(self.scan_params[i][1]))) # x center
             self.parent.file_tab.scan_table.setItem(i,1,QTableWidgetItem(str(self.scan_params[i][3]))) # y center
-            # self.file_tab.scan_table.setItem(i,2,QTableWidgetItem(str(scan_parameters[0]))) # z center
+            self.parent.file_tab.scan_table.setItem(i,2,QTableWidgetItem(str(0))) # z center
             self.parent.file_tab.scan_table.setItem(i,3,QTableWidgetItem(str(self.scan_params[i][0]))) # theta
             self.parent.file_tab.scan_table.setItem(i,4,QTableWidgetItem(str(self.scan_params[i][2]))) # x width
             self.parent.file_tab.scan_table.setItem(i,5,QTableWidgetItem(str(self.x_pixel_size))) # x step_size
@@ -320,15 +321,12 @@ class CoarseScanWidget(QWidget):
             self.parent.file_tab.scan_table.setItem(i,7,QTableWidgetItem(str(self.y_pixel_size))) # y step_sze
             self.parent.file_tab.scan_table.setItem(i,8,QTableWidgetItem(str(self.dwell_time))) # dwell time
 
-        return
+            coordinate_list.append((self.scan_params[i][1], self.scan_params[i][3], 0, self.scan_params[i][0],
+                                    self.scan_params[i][1], self.scan_params[i][3]))
 
-    # def enable_build_scan_button(self):
-    #     if (self.x_pixel_size is None) or (self.y_pixel_size is None) or \
-    #             (self.dwell_time is None) or (self.scan_params is None):
-    #         return
-    #     else:
-    #         self.build_scan_button.setDisabled(False)
-    #     return
+        self.parent.file_tab.set_coordinate_list(coordinate_list)
+
+        return
 
     def on_show_plots_button_click(self):
 

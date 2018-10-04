@@ -10,7 +10,6 @@ import numpy as np
 please enter the scan prameters below:
 scans [x-center(um), y-center.(um), x-width.(um), y-width.(um), x-stepsize.(um), Y-stepsize.(um), dwell.(ms)]
 '''
-caput('9idbTAU:SM:Ps:xyDiffMotion.VAL', 1)
 
 scans = [
 

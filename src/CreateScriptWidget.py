@@ -232,7 +232,6 @@ class ScriptWidget(QWidget):
         file_name = "{}{}{}".format(self.text_path.text(), '/', self.text_file.text())
         log_file_name = "{}{}{}".format(self.text_path.text(), '/', self.log_file.text())
 
-        num_rows = self.scan_table.rowCount()
         for row in range(self.table_index + 1):
             try:
                 x_width_list.append(self.scan_table.item(row, 4).text())
@@ -290,5 +289,9 @@ class ScriptWidget(QWidget):
         self.scan_table.setItem(self.table_index, 2, QTableWidgetItem("%.3f" % coordinates[2]))
         self.scan_table.setItem(self.table_index, 3, QTableWidgetItem("%.3f" % coordinates[3]))
 
+    def set_coordinate_list(self, coordinates):
+
+        self.coordinate_list = coordinates
+        self.table_index = len(coordinates) - 1
 
         return

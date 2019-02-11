@@ -352,9 +352,15 @@ class CoarseScanWidget(QWidget):
 
             coordinate_list.append((self.scan_params[i][1], self.scan_params[i][3], 0, self.scan_params[i][0],
                                     self.scan_params[i][1], self.scan_params[i][3]))
+<<<<<<< HEAD
 
         self.parent.file_tab.set_coordinate_list(coordinate_list)
         # self.eta = self.scan_boundary.calc_ETA(float(self.dwell_time), float(self.x_pixel_size), float(self.y_pixel_size))
+=======
+
+        self.parent.file_tab.set_coordinate_list(coordinate_list)
+
+>>>>>>> 588619dd4cb65181662ae792e02f37bcd2efed89
         return
 
     def on_show_plots_button_click(self):

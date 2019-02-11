@@ -44,7 +44,8 @@ except ImportError:
     from PyQt5.QtGui import *
     from PyQt5.QtCore import *
     from PyQt5.QtWidgets import *
-
+    import time
+    from pylab import *
 
 class RunWidget(QWidget):
     def __init__(self, parent):
@@ -62,6 +63,10 @@ class RunWidget(QWidget):
         self.scriptFullPath = QLineEdit(self)
         self.browseButton = QPushButton('Browse')
         self.browseButton.clicked.connect(self.on_browse_button_click)
+        self.label_eta = QLabel("ETA: ")
+        self.label_eta.setAlignment(Qt.AlignLeft)
+        self.text_eta = QLineEdit('0')
+        self.text_eta.setAlignment(Qt.AlignLeft)
         self.scriptProcess = QProcess(self)
         self.scriptProcess.readyRead.connect(self.on_process_ready_read)
         self.scriptProcess.started.connect(self.on_process_started)
@@ -70,6 +75,7 @@ class RunWidget(QWidget):
         vbox = QVBoxLayout()
         hbox1 = QHBoxLayout()
         hbox2 = QHBoxLayout()
+        hbox3 = QHBoxLayout()
 
         hbox1.addWidget(self.scriptFullPath)
         hbox1.addWidget(self.browseButton)
@@ -77,9 +83,13 @@ class RunWidget(QWidget):
         hbox2.addWidget(self.startButton)
         hbox2.addWidget(self.stopButton)
 
+        hbox3.addWidget(self.label_eta)
+        hbox3.addWidget(self.text_eta)
+
         vbox.addWidget(self.outputTextbox)
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
+        vbox.addLayout(hbox3)
 
         self.setLayout(vbox)
 
@@ -95,6 +105,16 @@ class RunWidget(QWidget):
             self.browseButton.setEnabled(True)
             self.stopButton.setEnabled(True)
 
+    def display_eta(self):
+        # eta = self.parent.coarse_scan_tab.eta
+        # while eta > 0:
+        #     hours = floor(eta / 60 / 60)
+        #     min = floor((eta / 60 / 60 - hours) * 60)
+        #     seconds = floor(eta - min * 60 - hours * 60 * 60)
+        #     print('{} : {} : {}'.format(hours, min, seconds))
+        #     time.sleep(5)
+        #     eta -= 5
+        pass
     @pyqtSlot()
     def on_browse_button_click(self):
         file_name = QFileDialog.getOpenFileName(self, "Select Python Script", "", "Python Files (*.py)")
@@ -109,6 +129,7 @@ class RunWidget(QWidget):
             print ('Close process first')
             self.scriptProcess.kill()
         self.scriptProcess.start('python', [self.scriptFullPath.text()])
+        # self.display_eta()
 
     @pyqtSlot()
     def on_stop_button_click(self):

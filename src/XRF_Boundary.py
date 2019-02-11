@@ -43,6 +43,7 @@ import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from pylab import *
 
 
 class XRFBoundary(object):
@@ -59,6 +60,7 @@ class XRFBoundary(object):
         self.bounds_positions = []
         self.coarse_positions = []
         self.projections = []
+
 
         return
 
@@ -299,22 +301,21 @@ class XRFBoundary(object):
         """
         x_positions = self.hdf_files[0]["MAPS"]["x_axis"][:]
         y_positions = self.hdf_files[0]["MAPS"]["y_axis"][:]
-
+        self.coarse_positions = []
         for i in range(len(self.theta)):
 
-            x_left = round(x_positions[self.bounds[0][i]], 4)
-            x_right = round(x_positions[self.bounds[1][i]], 4)
-            x_center = round((x_right + x_left) / 2, 4)
-            x_width = round(x_right - x_left, 4)
-            y_top = round(y_positions[self.bounds[2][i]], 4)
-            y_bottom = round(y_positions[self.bounds[3][i]], 4)
-            y_center = round((y_top + y_bottom) / 2, 4)
-            y_width = round(y_bottom - y_top, 4)
+            x_left = round(x_positions[int(self.bounds[0][i])], 5)
+            x_right = round(x_positions[int(self.bounds[1][i])], 5)
+            x_center = round((x_right + x_left) / 2, 5)
+            x_width = round(x_right - x_left, 5)
+            y_top = round(y_positions[int(self.bounds[2][i])], 5)
+            y_bottom = round(y_positions[int(self.bounds[3][i])], 5)
+            y_center = round((y_top + y_bottom) / 2, 5)
+            y_width = round(y_bottom - y_top, 5)
             x_pos_temp = list([self.theta[i], x_center, x_width, y_center, y_width])
             self.coarse_positions.append(x_pos_temp)        
 
         return self.coarse_positions
-
 
     def interpolate_bounds(self, dtheta):
         '''
@@ -326,9 +327,17 @@ class XRFBoundary(object):
 
         :return:
         '''
-        self.bounds_positions = []
-        x_positions = self.hdf_files[0]["MAPS"]["x_axis"][:]
-        y_positions = self.hdf_files[0]["MAPS"]["y_axis"][:]
+        #identify whether or not adjacet coarse scan angle differnce is divides evenly by input
+        #angle increment
+        angle_diff = []
+        for i in range(len(self.theta)-1):
+            angle_diff.append(self.theta[i+1]-self.theta[i])
+        for i in angle_diff:
+            if i%dtheta != 0:
+                self.interpolate_bounds2(dtheta)
+                return
+            else:
+                continue
 
         #gets initial angle from self.theta
         first_angle= self.theta[0]
@@ -338,8 +347,10 @@ class XRFBoundary(object):
         all_theta = np.arange(first_angle,last_angle+dtheta,dtheta)
         #calculates total number of fine scans from coarse scans and angle icrement
         total_frames = len(all_theta)
-        #claculates frequency of coarse scan frames:
-        freq = int((self.theta[1] - self.theta[0]) / dtheta)
+
+        self.bounds_positions = []
+        x_positions = self.hdf_files[0]["MAPS"]["x_axis"][:]
+        y_positions = self.hdf_files[0]["MAPS"]["y_axis"][:]
 
         #initialise interpolated boundaries to zero-valued array of length(total_frames)
         all_edges = {}
@@ -381,11 +392,11 @@ class XRFBoundary(object):
 
             #boundary parameters using physical positions
         for i in range(total_frames):
-            x_center = round((all_edges[1][i] + all_edges[0][i])/2,6)
-            x_width = round(all_edges[1][i] - all_edges[0][i],6)
-            y_center = round((all_edges[3][i] + all_edges[2][i])/2,6)
-            y_width = round(all_edges[3][i] - all_edges[2][i],6)
-            pos_temp = list([all_theta[i],x_center,x_width,y_center,y_width])
+            x_center = (all_edges[1][i] + all_edges[0][i])/2
+            x_width = all_edges[1][i] - all_edges[0][i]
+            y_center = (all_edges[3][i] + all_edges[2][i])/2
+            y_width = all_edges[3][i] - all_edges[2][i]
+            pos_temp = list([all_theta[i], x_center,x_width,y_center,y_width])
             self.bounds_positions.append(pos_temp)
 
         # Creates and writes to file
@@ -398,6 +409,140 @@ class XRFBoundary(object):
             out_pos.write(format_string.format(**format_dict))
         out_pos.close()
         return self.bounds_positions
+
+    def interpolate_bounds2(self, dtheta):
+        '''
+        This function interpolates boundary parameters for fine scans from coarse
+        scan boundary information (self.bounds)
+
+        :param dtheta: Incremental angle value between tomography scans
+        :type  dtheta: float
+
+        :return:
+        '''
+        coarse = self.theta
+        ExFine = np.arange(self.theta[0],self.theta[-1],0.1)
+        fine = np.arange(self.theta[0],self.theta[-1],dtheta)
+        coarse_ExFine = np.unique(np.concatenate((coarse,ExFine),0))
+        coarse_fine = np.unique(np.concatenate((coarse,fine),0))
+        lin_space = np.linspace(self.theta[0],self.theta[-1],len(coarse_ExFine))
+        ratio = coarse_ExFine/lin_space
+        ratio[np.isnan(ratio)] = 1
+        ratio = ratio - 1
+        total_frames = len(lin_space)
+
+        self.bounds_positions = []
+        x_positions = self.hdf_files[0]["MAPS"]["x_axis"][:]
+        y_positions = self.hdf_files[0]["MAPS"]["y_axis"][:]
+
+        #thes are the interpolated edges at 0.5 degree increments, they will serve as a lookup table.
+        left_edge = np.zeros(total_frames)  # x left edge
+        right_edge = np.zeros(total_frames)  # x right edge
+        top_edge = np.zeros(total_frames)  # y top edge
+        bottom_edge = np.zeros(total_frames)  # y bottom edge
+
+        #these are the interpolated edges at the user defined angle increments.
+        left_edge2 = np.zeros(len(coarse_fine))  # x left edge
+        right_edge2 = np.zeros(len(coarse_fine))  # x right edge
+        top_edge2 = np.zeros(len(coarse_fine))  # y top edge
+        bottom_edge2 = np.zeros(len(coarse_fine))  # y bottom edge
+
+        angle_index = []
+        for i in range(len(self.theta)):
+            temp_index = int(np.where(coarse_ExFine == self.theta[i])[0][0])
+            angle_index.append(temp_index)
+            left_edge[temp_index] = x_positions[int(self.bounds[0][i])]
+            right_edge[temp_index] = x_positions[int(self.bounds[1][i])]
+            top_edge[temp_index] = y_positions[int(self.bounds[2][i])]
+            bottom_edge[temp_index] = y_positions[int(self.bounds[3][i])]
+
+        for i in range(total_frames):
+            if i>0 and i in angle_index:
+                #calculates incremental boundary shift in position units between adjacent coarse scans.
+                temp_index = int(np.where(np.array(angle_index) == i)[0][0])
+                frame_difference = angle_index[temp_index] - angle_index[temp_index-1]
+
+                diffx1 = (left_edge[i]-left_edge[angle_index[temp_index-1]])/frame_difference
+                diffx2 = (right_edge[i]-right_edge[angle_index[temp_index-1]])/frame_difference
+                diffy1 = (top_edge[i]-top_edge[angle_index[temp_index-1]])/frame_difference
+                diffy2 = (bottom_edge[i]-bottom_edge[angle_index[temp_index-1]])/frame_difference
+
+                for j in range(1,frame_difference):
+                    #adds incremental boundary shift to frames in between coarse scans.
+                    indx = i - frame_difference + j
+                    left_edge[indx] = left_edge[i-frame_difference] + diffx1*j
+                    right_edge[indx] = right_edge[i-frame_difference] + diffx2*j
+                    top_edge[indx] = top_edge[i-frame_difference] + diffy1*j
+                    bottom_edge[indx] = bottom_edge[i-frame_difference] + diffy2*j
+
+        for i in range(len(coarse_fine)):
+            idx = np.abs(coarse_ExFine-coarse_fine[i]).argmin()
+            left_edge2[i] = left_edge[idx]
+            right_edge2[i] = right_edge[idx]
+            top_edge2[i] = top_edge[idx]
+            bottom_edge2[i] = bottom_edge[idx]
+
+        # figure()
+        # plt.plot(coarse_ExFine, left_edge, marker = 'o')
+        # plt.plot(coarse_fine, left_edge2, marker = 'o')
+        # plt.legend(['even', 'adjusted'])
+        # show()
+
+        for i in range(len(coarse_fine)):
+            x_center = (right_edge2[i] + left_edge2[i])/2
+            x_width = right_edge2[i] - left_edge2[i]
+            y_center = (bottom_edge2[i] + top_edge2[i])/2
+            y_width = bottom_edge2[i] - top_edge2[i]
+            pos_temp = list([coarse_fine[i],x_center,x_width,y_center,y_width])
+            self.bounds_positions.append(pos_temp)
+
+        return self.bounds_positions
+
+    def offset_bounds(self, angle_offset, x_offset, y_offset):
+        for i in range(1, len(self.bounds_positions)):
+            self.bounds_positions[i-1][0] += angle_offset
+            self.bounds_positions[i-1][1] += (self.bounds_positions[i][1] - self.bounds_positions[i-1][1])*angle_offset
+            self.bounds_positions[i-1][2] += (self.bounds_positions[i][2] - self.bounds_positions[i-1][2])*angle_offset + x_offset*2
+            self.bounds_positions[i-1][3] += (self.bounds_positions[i][3] - self.bounds_positions[i-1][3])*angle_offset
+            self.bounds_positions[i-1][4] += (self.bounds_positions[i][4] - self.bounds_positions[i-1][4])*angle_offset + y_offset*2
+        self.bounds_positions[-1][0] += angle_offset
+        self.bounds_positions[-1][1] += (self.bounds_positions[-1][1] - self.bounds_positions[-2][1])*angle_offset
+        self.bounds_positions[-1][2] += (self.bounds_positions[-1][2] - self.bounds_positions[-2][2])*angle_offset + x_offset*2
+        self.bounds_positions[-1][3] += (self.bounds_positions[-1][3] - self.bounds_positions[-2][3])*angle_offset
+        self.bounds_positions[-1][4] += (self.bounds_positions[-1][4] - self.bounds_positions[-2][4])*angle_offset + y_offset*2
+
+        for i in range(len(self.bounds_positions)):
+            self.bounds_positions[i][0] = round(self.bounds_positions[i][0], 4)
+            self.bounds_positions[i][1] = round(self.bounds_positions[i][1], 4)
+            self.bounds_positions[i][2] = round(self.bounds_positions[i][2], 4)
+            self.bounds_positions[i][3] = round(self.bounds_positions[i][3], 4)
+            self.bounds_positions[i][4] = round(self.bounds_positions[i][4], 4)
+        return
+
+    def offset_ROI_bounds(self, x_offset, y_offset):
+        coarse_bounds = self.calc_coarse_bounds()
+        x_pixel_size = round(coarse_bounds[0][2]/(self.projections[0].shape[1]-1), 4)
+        y_pixel_size = round(coarse_bounds[0][4]/(self.projections[0].shape[0]-1), 4)
+
+        for i in range(len(self.bounds[0])):
+
+            self.bounds[0][i] -= int(x_offset/x_pixel_size)
+            self.bounds[1][i] += int(x_offset/x_pixel_size)
+            self.bounds[2][i] -= int(y_offset/y_pixel_size)
+            self.bounds[3][i] += int(y_offset/y_pixel_size)
+
+        return
+
+    def calc_ETA(self, dwell, x_size, y_size):
+
+        eta = 0
+        for i in range(len(self.bounds_positions)):
+            pixels_wide = self.bounds_positions[i][2]/x_size
+            pixels_tall = self.bounds_positions[i][4]/y_size
+            eta += dwell*pixels_wide*pixels_tall*1.1
+        time_in_seconds = eta/1000
+
+        return time_in_seconds
 
     def show_roi_box(self):
 
@@ -431,6 +576,7 @@ class XRFBoundary(object):
                     plt.tight_layout()
                     plt.subplots_adjust(wspace=0.1, hspace=0.2)
                     plt.title(str(theta[i]))
+                ax.set_aspect(projection.shape[1]/projection.shape[0])
         plt.show()
         return
 

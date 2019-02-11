@@ -69,7 +69,7 @@ class CoarseScanWidget(QWidget):
         self.x_pixel_size = None
         self.y_pixel_size = None
         self.dwell_time = None
-
+        self.eta = None
         self.tree_view = QTreeView()
         self.list_view = QListWidget()
 
@@ -86,7 +86,7 @@ class CoarseScanWidget(QWidget):
 
         self.tree_view.setModel(self.dir_model)
 
-        self.tree_view.setRootIndex(self.dir_model.index(path))
+        self.tree_view.setRootIndex(self.dir_model.index('/'))
         self.tree_view.setColumnWidth(0,200)
 
         # Enable selection of multiple files.
@@ -122,45 +122,58 @@ class CoarseScanWidget(QWidget):
         self.show_plots_button.setToolTip('Show plots with calculated boundaries.')
         self.show_plots_button.clicked.connect(self.on_show_plots_button_click)
 
-        self.label_x_size = QLabel('X step size (um)')
+        self.label_x_size = QLabel('X step size (mm)')
         self.label_x_size.setAlignment(Qt.AlignRight)
-        self.text_x_size = QLineEdit('1')
-        self.text_x_size.setMinimumWidth(80)
-        self.text_x_size.setMaximumSize(100, 20)
+        self.text_x_size = QLineEdit('0.001')
+        self.text_x_size.setMinimumWidth(70)
+        self.text_x_size.setMaximumSize(70, 20)
         # self.text_x_size.textChanged.connect(self.enable_build_scan_button)
 
-        self.label_y_size = QLabel('Y step size (um)')
+        self.label_y_size = QLabel('Y step size (mm)')
         self.label_y_size.setAlignment(Qt.AlignRight)
-        self.text_y_size = QLineEdit('1')
-        self.text_y_size.setMinimumWidth(80)
-        self.text_y_size.setMaximumSize(100, 20)
+        self.text_y_size = QLineEdit('0.001')
+        self.text_y_size.setMinimumWidth(70)
+        self.text_y_size.setMaximumSize(70, 20)
         # self.text_y_size.textChanged.connect(self.enable_build_scan_button)
 
         self.label_dwell = QLabel('Dwell time (ms)')
         self.label_dwell.setAlignment(Qt.AlignRight)
         self.text_dwell = QLineEdit('50')
-        self.text_dwell.setMinimumWidth(80)
-        self.text_dwell.setMaximumSize(100, 20)
+        self.text_dwell.setMinimumWidth(70)
+        self.text_dwell.setMaximumSize(70, 20)
         # self.text_dwell.textChanged.connect(self.enable_build_scan_button)
+
+        self.label_angle_offset = QLabel('Angle offset')
+        self.label_angle_offset.setAlignment(Qt.AlignRight)
+        self.text_angle_offset = QLineEdit('0')
+        self.text_angle_offset.setMinimumWidth(70)
+        self.text_angle_offset.setMaximumSize(70, 20)
+        # self.text_angle_offset.textChanged.connect(self.enable_build_scan_button)
 
         self.label_element = QLabel('Element')
         self.label_element.setAlignment(Qt.AlignRight)
         self.text_element = QLineEdit()
         self.text_element.setReadOnly(True)
-        self.text_element.setMinimumWidth(80)
-        self.text_element.setMaximumSize(100, 20)
+        self.text_element.setMinimumWidth(70)
+        self.text_element.setMaximumSize(70, 20)
 
-        self.label_coefficient = QLabel('Boundary coefficient')
+        self.label_coefficient = QLabel('Boundary Coefficient')
         self.label_coefficient.setAlignment(Qt.AlignRight)
         self.text_coefficient = QLineEdit()
-        self.text_coefficient.setMinimumWidth(80)
-        self.text_coefficient.setMaximumSize(100, 20)
+        self.text_coefficient.setMinimumWidth(70)
+        self.text_coefficient.setMaximumSize(70, 20)
 
-        self.label_theta = QLabel('Delta Theta')
+        self.label_boundary_offset = QLabel('Boundary Offset x,y (mm)')
+        self.label_boundary_offset.setAlignment(Qt.AlignRight)
+        self.text_boundary_offset = QLineEdit('0,0')
+        self.text_boundary_offset.setMinimumWidth(70)
+        self.text_boundary_offset.setMaximumSize(70, 20)
+
+        self.label_theta = QLabel('Angle Increment')
         self.label_theta.setAlignment(Qt.AlignRight)
         self.text_theta = QLineEdit()
-        self.text_theta.setMinimumWidth(80)
-        self.text_theta.setMaximumSize(100, 20)
+        self.text_theta.setMinimumWidth(70)
+        self.text_theta.setMaximumSize(70, 20)
 
         self.label_stage_pv = QLabel('Rotation Stage PV')
         self.label_stage_pv.setAlignment(Qt.AlignRight)
@@ -190,18 +203,22 @@ class CoarseScanWidget(QWidget):
         grid_layout.addWidget(self.label_x_size, 0, 2)
         grid_layout.addWidget(self.label_y_size, 1, 2)
         grid_layout.addWidget(self.label_dwell, 2, 2)
+        grid_layout.addWidget(self.label_theta, 0, 4)
         grid_layout.addWidget(self.text_x_size, 0, 3)
         grid_layout.addWidget(self.text_y_size, 1, 3)
         grid_layout.addWidget(self.text_dwell, 2, 3)
+        grid_layout.addWidget(self.text_theta, 0, 5)
 
-        grid_layout.addWidget(self.label_element, 0, 4)
-        grid_layout.addWidget(self.label_coefficient, 1, 4)
-        grid_layout.addWidget(self.label_theta, 2, 4)
-        grid_layout.addWidget(self.label_stage_pv, 3, 4)
-        grid_layout.addWidget(self.text_element, 0, 5)
-        grid_layout.addWidget(self.text_coefficient, 1, 5)
-        grid_layout.addWidget(self.text_theta, 2, 5)
-        grid_layout.addWidget(self.text_stage_pv, 3, 5)
+        grid_layout.addWidget(self.label_element, 3, 2)
+        grid_layout.addWidget(self.label_angle_offset, 1, 4)
+        grid_layout.addWidget(self.label_coefficient, 2, 4)
+        grid_layout.addWidget(self.label_boundary_offset, 3, 4)
+        grid_layout.addWidget(self.label_stage_pv, 4, 4)
+        grid_layout.addWidget(self.text_element, 3, 3)
+        grid_layout.addWidget(self.text_angle_offset, 1, 5)
+        grid_layout.addWidget(self.text_coefficient, 2, 5)
+        grid_layout.addWidget(self.text_boundary_offset, 3, 5)
+        grid_layout.addWidget(self.text_stage_pv, 4, 5)
 
         widget_layout = QVBoxLayout()
         widget_layout.addLayout(files_hbox)
@@ -289,11 +306,23 @@ class CoarseScanWidget(QWidget):
 
         coefficient = int(self.text_coefficient.text())
         element = self.text_element.text()
-        dtheta = self.text_theta.text()
-        dtheta = float(dtheta)
+        dtheta = float(self.text_theta.text())
+        angle_offset = float(self.text_angle_offset.text())
+        try:
+            x_offset, y_offset = self.text_boundary_offset.text().split(',')
+            x_offset = float(x_offset)
+            y_offset = float(y_offset)
+        except:
+            print("invalid format: try 'x_offset (mm),y_offset (mm)")
+            x_offset, y_offset = [0,0]
+            x_offset = float(x_offset)
+            y_offset = float(y_offset)
+
         element_index = self.scan_boundary.get_element_index(element)
         self.scan_boundary.calc_xy_bounds(coefficient, element_index)
         self.scan_boundary.interpolate_bounds(dtheta)
+        self.scan_boundary.offset_bounds(angle_offset, x_offset, y_offset)
+        self.scan_boundary.offset_ROI_bounds(x_offset, y_offset)
         self.scan_params = self.scan_boundary.get_boundaries()
 
         self.show_plots_button.setDisabled(False)
@@ -302,17 +331,18 @@ class CoarseScanWidget(QWidget):
         return
 
     def on_build_scan_button_click(self):
-        
+
         self.scan_params2 = []
         self.x_pixel_size = self.text_x_size.text()
         self.y_pixel_size = self.text_y_size.text()
         self.dwell_time = self.text_dwell.text()
+        coordinate_list = []
 
         self.parent.file_tab.scan_table.setRowCount(len(self.scan_params))
         for i in range(len(self.scan_params)): #i is the row number
             self.parent.file_tab.scan_table.setItem(i,0,QTableWidgetItem(str(self.scan_params[i][1]))) # x center
             self.parent.file_tab.scan_table.setItem(i,1,QTableWidgetItem(str(self.scan_params[i][3]))) # y center
-            # self.file_tab.scan_table.setItem(i,2,QTableWidgetItem(str(scan_parameters[0]))) # z center
+            self.parent.file_tab.scan_table.setItem(i,2,QTableWidgetItem(str(0))) # z center
             self.parent.file_tab.scan_table.setItem(i,3,QTableWidgetItem(str(self.scan_params[i][0]))) # theta
             self.parent.file_tab.scan_table.setItem(i,4,QTableWidgetItem(str(self.scan_params[i][2]))) # x width
             self.parent.file_tab.scan_table.setItem(i,5,QTableWidgetItem(str(self.x_pixel_size))) # x step_size
@@ -320,15 +350,12 @@ class CoarseScanWidget(QWidget):
             self.parent.file_tab.scan_table.setItem(i,7,QTableWidgetItem(str(self.y_pixel_size))) # y step_sze
             self.parent.file_tab.scan_table.setItem(i,8,QTableWidgetItem(str(self.dwell_time))) # dwell time
 
-        return
+            coordinate_list.append((self.scan_params[i][1], self.scan_params[i][3], 0, self.scan_params[i][0],
+                                    self.scan_params[i][1], self.scan_params[i][3]))
 
-    # def enable_build_scan_button(self):
-    #     if (self.x_pixel_size is None) or (self.y_pixel_size is None) or \
-    #             (self.dwell_time is None) or (self.scan_params is None):
-    #         return
-    #     else:
-    #         self.build_scan_button.setDisabled(False)
-    #     return
+        self.parent.file_tab.set_coordinate_list(coordinate_list)
+        # self.eta = self.scan_boundary.calc_ETA(float(self.dwell_time), float(self.x_pixel_size), float(self.y_pixel_size))
+        return
 
     def on_show_plots_button_click(self):
 

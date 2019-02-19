@@ -103,6 +103,7 @@ class RunWidget(QWidget):
             plaintext = plaintext + script + "\n"
         plaintext = plaintext[:-1]
         return plaintext
+        
     @pyqtSlot()
     def on_browse_button_click(self):
         file_names = QFileDialog.getOpenFileNames(self, "Select Python Script", "", "Python Files (*.py)")
@@ -114,15 +115,28 @@ class RunWidget(QWidget):
             tmp_file_list = tmp_file_list[:-1]
             self.scriptFullPath.setText(tmp_file_list)
 
+    # @pyqtSlot()
+    # def on_start_button_click(self):
+    #     scripts = self.scriptFullPath.toPlainText().split("\n")
+    #     for script in scripts:
+    #         print('Starting script(s): ' + script)
+    #         while self.scriptProcess.isOpen():
+    #             #wait until first process is finished.
+    #             time.sleep(5)
+    #         self.scriptProcess.start('python', [script])
+    #         scripts = scripts[:-1]
+    #         plaintext = self.update_batch_scan_list(scripts)
+    #         self.scriptFullPath.setText(plaintext)
+    #
     @pyqtSlot()
     def on_start_button_click(self):
         scripts = self.scriptFullPath.toPlainText().split("\n")
         for script in scripts:
             print('Starting script(s): ' + script)
+            self.scriptProcess.start('python', [script])
             while self.scriptProcess.isOpen():
                 #wait until first process is finished.
                 time.sleep(5)
-            self.scriptProcess.start('python', [script])
             scripts = scripts[:-1]
             plaintext = self.update_batch_scan_list(scripts)
             self.scriptFullPath.setText(plaintext)

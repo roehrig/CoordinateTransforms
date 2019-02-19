@@ -34,6 +34,7 @@ def calc_ETA(scan):
         pixels_tall = scan[i][4]/y_step
         eta += dwell*pixels_wide*pixels_tall*1.1
         total_time = eta/1000
+    return total_time
 
 eta = calc_ETA(scans)
 

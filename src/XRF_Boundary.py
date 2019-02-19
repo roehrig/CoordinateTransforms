@@ -533,17 +533,6 @@ class XRFBoundary(object):
 
         return
 
-    def calc_ETA(self, dwell, x_size, y_size):
-
-        eta = 0
-        for i in range(len(self.bounds_positions)):
-            pixels_wide = self.bounds_positions[i][2]/x_size
-            pixels_tall = self.bounds_positions[i][4]/y_size
-            eta += dwell*pixels_wide*pixels_tall*1.1
-        time_in_seconds = eta/1000
-
-        return time_in_seconds
-
     def show_roi_box(self):
 
         """

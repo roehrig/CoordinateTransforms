@@ -60,13 +60,10 @@ class RunWidget(QWidget):
         self.stopButton.clicked.connect(self.on_stop_button_click)
         self.outputTextbox = QPlainTextEdit(self)
         self.outputTextbox.resize(300, 400)
-        self.scriptFullPath = QLineEdit(self)
+        self.scriptFullPath = QTextEdit(self)
+        self.scriptFullPath.setMaximumHeight(25)
         self.browseButton = QPushButton('Browse')
         self.browseButton.clicked.connect(self.on_browse_button_click)
-        self.label_eta = QLabel("ETA: ")
-        self.label_eta.setAlignment(Qt.AlignLeft)
-        self.text_eta = QLineEdit('0')
-        self.text_eta.setAlignment(Qt.AlignLeft)
         self.scriptProcess = QProcess(self)
         self.scriptProcess.readyRead.connect(self.on_process_ready_read)
         self.scriptProcess.started.connect(self.on_process_started)
@@ -75,7 +72,6 @@ class RunWidget(QWidget):
         vbox = QVBoxLayout()
         hbox1 = QHBoxLayout()
         hbox2 = QHBoxLayout()
-        hbox3 = QHBoxLayout()
 
         hbox1.addWidget(self.scriptFullPath)
         hbox1.addWidget(self.browseButton)
@@ -83,13 +79,9 @@ class RunWidget(QWidget):
         hbox2.addWidget(self.startButton)
         hbox2.addWidget(self.stopButton)
 
-        hbox3.addWidget(self.label_eta)
-        hbox3.addWidget(self.text_eta)
-
         vbox.addWidget(self.outputTextbox)
         vbox.addLayout(hbox1)
         vbox.addLayout(hbox2)
-        vbox.addLayout(hbox3)
 
         self.setLayout(vbox)
 
@@ -105,35 +97,39 @@ class RunWidget(QWidget):
             self.browseButton.setEnabled(True)
             self.stopButton.setEnabled(True)
 
-    def display_eta(self):
-        # eta = self.parent.coarse_scan_tab.eta
-        # while eta > 0:
-        #     hours = floor(eta / 60 / 60)
-        #     min = floor((eta / 60 / 60 - hours) * 60)
-        #     seconds = floor(eta - min * 60 - hours * 60 * 60)
-        #     print('{} : {} : {}'.format(hours, min, seconds))
-        #     time.sleep(5)
-        #     eta -= 5
-        pass
+    def update_batch_scan_list(self, scripts):
+        plaintext = ""
+        for script in scripts:
+            plaintext = plaintext + script + "\n"
+        plaintext = plaintext[:-1]
+        return plaintext
     @pyqtSlot()
     def on_browse_button_click(self):
-        file_name = QFileDialog.getOpenFileName(self, "Select Python Script", "", "Python Files (*.py)")
-        if file_name is not None:
-            if len(file_name) > 0:
-                self.scriptFullPath.setText(file_name[0])
+        file_names = QFileDialog.getOpenFileNames(self, "Select Python Script", "", "Python Files (*.py)")
+        tmp_file_list = ""
+        self.scriptFullPath.setMaximumHeight(20*len(file_names[0]))
+        for file_name in file_names[0]:
+            tmp_file_list += file_name + "\n"
+        if tmp_file_list is not "":
+            tmp_file_list = tmp_file_list[:-1]
+            self.scriptFullPath.setText(tmp_file_list)
 
     @pyqtSlot()
     def on_start_button_click(self):
-        print('Starting script: ' + self.scriptFullPath.text())
-        if self.scriptProcess.isOpen():
-            print ('Close process first')
-            self.scriptProcess.kill()
-        self.scriptProcess.start('python', [self.scriptFullPath.text()])
-        # self.display_eta()
+        scripts = self.scriptFullPath.toPlainText().split("\n")
+        for script in scripts:
+            print('Starting script(s): ' + script)
+            while self.scriptProcess.isOpen():
+                #wait until first process is finished.
+                time.sleep(5)
+            self.scriptProcess.start('python', [script])
+            scripts = scripts[:-1]
+            plaintext = self.update_batch_scan_list(scripts)
+            self.scriptFullPath.setText(plaintext)
 
     @pyqtSlot()
     def on_stop_button_click(self):
-        print('Stopping script: ' + self.scriptFullPath.text())
+        print('Stopping script(s)')
         self.set_buttons_state(0)
         if self.scriptProcess.isOpen():
             self.scriptProcess.kill()

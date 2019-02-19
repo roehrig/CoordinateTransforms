@@ -37,9 +37,6 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 '''
 
-import h5py
-import numpy as np
-import string
 from XRF_Boundary import *
 from CreateScriptWidget import *
 from CheckBoxDialog import QMessageBoxWithCheckBox
@@ -255,7 +252,9 @@ class CoarseScanWidget(QWidget):
     def on_select_files_button_click(self):
 
         stage_pv = self.text_stage_pv.text()
-
+        # temporary hard-coded file path for rapid debugging
+        # self.file_path = "/home/fabricio/scans/coarsescan"
+        # self.file_list = ['2xfm_0043.h5', '2xfm_0044.h5', '2xfm_0045.h5', '2xfm_0046.h5', '2xfm_0047.h5', '2xfm_0048.h5', '2xfm_0049.h5']
         if self.file_path is None or stage_pv is '':
             err_msg = QMessageBox()
             err_msg.setIcon(QMessageBox.Critical)
@@ -354,7 +353,6 @@ class CoarseScanWidget(QWidget):
                                     self.scan_params[i][1], self.scan_params[i][3]))
 
         self.parent.file_tab.set_coordinate_list(coordinate_list)
-        # self.eta = self.scan_boundary.calc_ETA(float(self.dwell_time), float(self.x_pixel_size), float(self.y_pixel_size))
         return
 
     def on_show_plots_button_click(self):

@@ -41,12 +41,6 @@ eta = calc_ETA(scans)
 print('Batchscan starts')
 
 for batch_num, scan in enumerate(scans):
-    
-    hours = np.floor(eta / 60 / 60)
-    minutes = np.floor((eta / 60 / 60 - hours) * 60)
-    seconds = np.floor(eta - minutes * 60 - hours * 60 * 60)
-    print('ETA = Hours: {}  Min: {}  Seconds: {}'.format(hours, minutes, seconds))
-    eta  = eta - scan[batch_num][3]/scan[0[7]]*batch_num
 
     print('entering scan parameters for scan #{0:d}'.format(batch_num + 1))
     for i, pvs1 in enumerate(pvs):
@@ -74,6 +68,11 @@ for batch_num, scan in enumerate(scans):
     while not done:
         done = caget('2xfm:Fscan1.EXSC') == 0
         print('\t Batch {0:d}/{1:d} scan is ongoing'.format(batch_num + 1, len(scans)))
+        hours = np.floor(eta / 60 / 60)
+        minutes = np.floor((eta / 60 / 60 - hours) * 60)
+        seconds = np.floor(eta - minutes * 60 - hours * 60 * 60)
+        print('ETA = Hours: {}  Min: {}  Seconds: {}'.format(hours, minutes, seconds))
+        eta -= 10
         time.sleep(10.)
 
 print('Completeted. Congratulations!')

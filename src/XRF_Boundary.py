@@ -51,8 +51,8 @@ class XRFBoundary(object):
     def __init__(self):
 
         self.file_names = {}
-        self.theta = []             # A list of rotation stage positions from the scan.
-        self.hdf_files = []         # A list of hdf5 files that make up the scan data.
+        self.theta = []             #  A list of rotation stage positions from the scan.
+        self.hdf_files = []         #  A list of hdf5 files that make up the scan data.
         self.element = None
         self.element_index = 0
         self.element_list = []
@@ -61,10 +61,9 @@ class XRFBoundary(object):
         self.coarse_positions = []
         self.projections = []
 
-
         return
 
-    # Searches for path, files, and projection angles.
+    #  Searches for path, files, and projection angles.
     def open_files(self, path, files, stage_pv):
         """
         This function will iterate over all .hd5 files in the supplied path and will create three lists.
@@ -79,26 +78,26 @@ class XRFBoundary(object):
         :return:
         """
 
-        # Create a list of files in the given directory
+        #  Create a list of files in the given directory
         file_names = {}
         file_names[0], file_names[1], theta_array, hdf_files = [], [], [], []
 
-        # Encode the stage_pv value into binary format.
+        #  Encode the stage_pv value into binary format.
         byte_stage_pv = stage_pv.encode('ascii')
 
-        # Iterate through each file in the list
+        #  Iterate through each file in the list
         for file in files:
-            # If the file has the extension .h5, add the file name to a list and add
-            # the file name with full path to another list.
+            #  If the file has the extension .h5, add the file name to a list and add
+            #  the file name with full path to another list.
             if file.endswith('.h5'):
                 full_path = os.path.join(path, file)
                 file_names[0].append(file)
                 file_names[1].append(full_path)
-                # Create a File object for each file, make it read only.
+                #  Create a File object for each file, make it read only.
                 temp_file = h5py.File(full_path, 'r')
                 hdf_files.append(temp_file)
-                # Search for the angle of the sample stage for this data set.
-                # Add that value to an array.
+                #  Search for the angle of the sample stage for this data set.
+                #  Add that value to an array.
                 data_set = temp_file['MAPS']['extra_pvs']
                 pv_index = np.where(data_set[0]==byte_stage_pv)
                 if len(pv_index[0]) > 0:
@@ -182,7 +181,7 @@ class XRFBoundary(object):
         """
         return self.bounds_positions
 
-    def calc_xy_bounds(self, coefficient, element_index):
+    def calc_xy_bounds(self, coefficient, element_index, bound_y = True):
 
         """
         This function will find the outer boundaries of the sample in each of the scan files that are selected by the
@@ -197,12 +196,12 @@ class XRFBoundary(object):
 
         bounds = {}
         theta_array_length = len(self.theta)
-        bounds[0] = np.zeros(theta_array_length)  # x left edge
-        bounds[1] = np.zeros(theta_array_length)  # x right edge
-        bounds[2] = np.zeros(theta_array_length)  # y top edge
-        bounds[3] = np.zeros(theta_array_length)  # y bottom edge
+        bounds[0] = np.zeros(theta_array_length)  #  x left edge
+        bounds[1] = np.zeros(theta_array_length)  #  x right edge
+        bounds[2] = np.zeros(theta_array_length)  #  y top edge
+        bounds[3] = np.zeros(theta_array_length)  #  y bottom edge
 
-        # Creates a 2D array of dimension (number of lines) x (number of pixels)
+        #  Creates a 2D array of dimension (number of lines) x (number of pixels)
         tmp = self.hdf_files[0]["MAPS"]["XRF_roi"][element_index]
         dim_x = len(tmp[0])
         dim_y = len(tmp)
@@ -210,32 +209,32 @@ class XRFBoundary(object):
         count = 0
         self.projections = []
         self.bounds = []
-        # This block loops once for each scan angle.
-        # The loops counts over an array of indices that represent the
-        # self.theta list in sorted order by angle.
+        #  This block loops once for each scan angle.
+        #  The loops counts over an array of indices that represent the
+        #  self.theta list in sorted order by angle.
         for i in range(len(self.theta)):
             count += 1
-            # Replace all values of NaN with a zero.
+            #  Replace all values of NaN with a zero.
             projection = np.nan_to_num(self.hdf_files[i]["MAPS"]["XRF_roi"][element_index])
             self.projections.append(projection)
-            # Create two arrays of the x and y positions from the scan.
+            #  Create two arrays of the x and y positions from the scan.
             x_positions = self.hdf_files[i]["MAPS"]["x_axis"][:]
             y_positions = self.hdf_files[i]["MAPS"]["y_axis"][:]
 
-            # Calculate background noise/coeff, edges, width, and center
+            #  Calculate background noise/coeff, edges, width, and center
 
-            # Create an array where each element is a sum of a column in the scan data.
-            # It will be a 1D array of size equal to the number of columns.
+            #  Create an array where each element is a sum of a column in the scan data.
+            #  It will be a 1D array of size equal to the number of columns.
             column_sums = np.sum(projection, axis=0) / dim_y
-            # Create an array where each element is a sum of a row in the scan data.
-            # It will be a 1D array of size equal to the number of rows.
+            #  Create an array where each element is a sum of a row in the scan data.
+            #  It will be a 1D array of size equal to the number of rows.
             row_sums = np.sum(projection, axis=1) / dim_x
-            # Find the mean of the first two elements of the sum of columns.
+            #  Find the mean of the first two elements of the sum of columns.
             smallest_column_sum = np.sort(column_sums[column_sums>0])[:1]
-            # Find the mean of the first two elements of the sum of columns.
+            #  Find the mean of the first two elements of the sum of columns.
             smallest_row_sum = np.sort(row_sums[row_sums>0])[:1]
 
-            #set the noise level equal to the smallest of column_sums or row_sums
+            # set the noise level equal to the smallest of column_sums or row_sums
             if smallest_column_sum <= smallest_row_sum:
                 noise = smallest_column_sum
             else:
@@ -243,18 +242,18 @@ class XRFBoundary(object):
                 
             scale_factor = coefficient / 100
 
-            # Find the largest value in column_sum
+            #  Find the largest value in column_sum
             largest_column_sum = np.sort(column_sums)[::-1][:1]
-            # difference between largest_column_sum and noise
+            #  difference between largest_column_sum and noise
             diff_col = largest_column_sum - noise
-            # set vertical boundary threshold equal to the noise plus a fraction of diff_col
+            #  set vertical boundary threshold equal to the noise plus a fraction of diff_col
             thresh_col = diff_col * scale_factor + noise
 
-            # Find the largest value in row_sum
+            #  Find the largest value in row_sum
             largest_row_sum = np.sort(row_sums)[::-1][:1]
-            #difference between largest_row_sum and noise
+            # difference between largest_row_sum and noise
             diff_row = largest_row_sum - noise
-            # set horizontal boundary threshold equal to the noise plus a fraction of diff_row
+            #  set horizontal boundary threshold equal to the noise plus a fraction of diff_row
             thresh_row = diff_row * scale_factor + noise
 
             left_boundary = 0
@@ -262,32 +261,41 @@ class XRFBoundary(object):
             top_boundary = 0
             bottom_boundary = 0
 
-            # Find left edge of the image.
+            #  Find left edge of the image.
             for j in range(len(column_sums)):
+
                 if column_sums[j] > thresh_col:
                     left_boundary = j
-                    # Save the column index for the left boundary of the image.
+                    #  Save the column index for the left boundary of the image.
                     bounds[0][i] = left_boundary
                     break
-            # Find right edge image.
+            #  Find right edge image.
             for k in range(len(column_sums)):
                 if column_sums[len(column_sums) - k - 1] > thresh_col:
                     right_boundary = len(column_sums) - k - 1
-                    # Save the column index of the right boundary of the image.
+                    #  Save the column index of the right boundary of the image.
                     bounds[1][i] = right_boundary
                     break
-            # Find top edge of the image.
-            for l in range(len(row_sums)):
-                if row_sums[l] > thresh_row:
-                    top_boundary = l
+            #  Find top edge of the image.
+            if bound_y:
+                for l in range(len(row_sums)):
+                    if row_sums[l] > thresh_row:
+                        top_boundary = l
+                        bounds[2][i] = top_boundary
+                        break
+            #  Find bottom edge of the image.
+                for m in range(len(row_sums)):
+                    if row_sums[len(row_sums) - m - 1] > thresh_row:
+                        bottom_boundary = len(row_sums) - m - 1
+                        bounds[3][i] = bottom_boundary
+                        break
+            else:
+                for l in range(len(row_sums)):
+                    top_boundary = 0
                     bounds[2][i] = top_boundary
-                    break
-            # Find bottom edge of the image.
-            for m in range(len(row_sums)):
-                if row_sums[len(row_sums) - m - 1] > thresh_row:
-                    bottom_boundary = len(row_sums) - m - 1
+                for m in range(len(row_sums)):
+                    bottom_boundary = len(row_sums)-1
                     bounds[3][i] = bottom_boundary
-                    break
 
         self.bounds = bounds
         return
@@ -327,8 +335,8 @@ class XRFBoundary(object):
 
         :return:
         '''
-        #identify whether or not adjacet coarse scan angle differnce is divides evenly by input
-        #angle increment
+        # identify whether or not adjacet coarse scan angle differnce is divides evenly by input
+        # angle increment
         angle_diff = []
         for i in range(len(self.theta)-1):
             angle_diff.append(self.theta[i+1]-self.theta[i])
@@ -339,28 +347,28 @@ class XRFBoundary(object):
             else:
                 continue
 
-        #gets initial angle from self.theta
+        #  gets initial angle from self.theta
         first_angle= self.theta[0]
-        #gets last angle from self.theta
+        # gets last angle from self.theta
         last_angle= self.theta[::-1][0]
-        #calculates all fine_scan angles
+        # calculates all fine_scan angles
         all_theta = np.arange(first_angle,last_angle+dtheta,dtheta)
-        #calculates total number of fine scans from coarse scans and angle icrement
+        # calculates total number of fine scans from coarse scans and angle icrement
         total_frames = len(all_theta)
 
         self.bounds_positions = []
         x_positions = self.hdf_files[0]["MAPS"]["x_axis"][:]
         y_positions = self.hdf_files[0]["MAPS"]["y_axis"][:]
 
-        #initialise interpolated boundaries to zero-valued array of length(total_frames)
+        # initialise interpolated boundaries to zero-valued array of length(total_frames)
         all_edges = {}
-        all_edges[0] = np.zeros(total_frames)  # x left edge
-        all_edges[1] = np.zeros(total_frames)  # x right edge
-        all_edges[2] = np.zeros(total_frames)  # y top edge
-        all_edges[3] = np.zeros(total_frames)  # y bottom edge
+        all_edges[0] = np.zeros(total_frames)  #  x left edge
+        all_edges[1] = np.zeros(total_frames)  #  x right edge
+        all_edges[2] = np.zeros(total_frames)  #  y top edge
+        all_edges[3] = np.zeros(total_frames)  #  y bottom edge
                 
 
-        #assigns known boundaries from coarse scans to new dictionary containing physical positions
+        # assigns known boundaries from coarse scans to new dictionary containing physical positions
         angle_index = []
         for i in range(len(self.theta)):
             temp_index = int(np.where(all_theta == self.theta[i])[0][0])
@@ -373,7 +381,7 @@ class XRFBoundary(object):
         for i in range(total_frames):
 
             if i>0 and i in angle_index:
-                #calculates incremental boundary shift in position units between adjacent coarse scans.
+                # calculates incremental boundary shift in position units between adjacent coarse scans.
                 temp_index = int(np.where(np.array(angle_index) == i)[0][0])
                 frame_difference = angle_index[temp_index] - angle_index[temp_index-1]
 
@@ -383,14 +391,14 @@ class XRFBoundary(object):
                 diffy2 = (all_edges[3][i]-all_edges[3][angle_index[temp_index-1]])/frame_difference
 
                 for j in range(1,frame_difference):
-                    #adds incremental boundary shift to frames in between coarse scans.
+                    # adds incremental boundary shift to frames in between coarse scans.
                     indx = i - frame_difference + j
                     all_edges[0][indx] = all_edges[0][i-frame_difference] + diffx1*j
                     all_edges[1][indx] = all_edges[1][i-frame_difference] + diffx2*j
                     all_edges[2][indx] = all_edges[2][i-frame_difference] + diffy1*j
                     all_edges[3][indx] = all_edges[3][i-frame_difference] + diffy2*j
 
-            #boundary parameters using physical positions
+            # boundary parameters using physical positions
         for i in range(total_frames):
             x_center = (all_edges[1][i] + all_edges[0][i])/2
             x_width = all_edges[1][i] - all_edges[0][i]
@@ -399,7 +407,7 @@ class XRFBoundary(object):
             pos_temp = list([all_theta[i], x_center,x_width,y_center,y_width])
             self.bounds_positions.append(pos_temp)
 
-        # Creates and writes to file
+        #  Creates and writes to file
         out_pos = open('xyBounds.txt', 'w')
         out_pos.write('angle x_center x_width y_center y_width \n')
         format_string = '{angle:.3f}, {x_center:.3f}, {x_width:.3f}, {y_center:.3f}, {y_width:.3f},\n'
@@ -435,17 +443,17 @@ class XRFBoundary(object):
         x_positions = self.hdf_files[0]["MAPS"]["x_axis"][:]
         y_positions = self.hdf_files[0]["MAPS"]["y_axis"][:]
 
-        #thes are the interpolated edges at 0.5 degree increments, they will serve as a lookup table.
-        left_edge = np.zeros(total_frames)  # x left edge
-        right_edge = np.zeros(total_frames)  # x right edge
-        top_edge = np.zeros(total_frames)  # y top edge
-        bottom_edge = np.zeros(total_frames)  # y bottom edge
+        # thes are the interpolated edges at 0.5 degree increments, they will serve as a lookup table.
+        left_edge = np.zeros(total_frames)  #  x left edge
+        right_edge = np.zeros(total_frames)  #  x right edge
+        top_edge = np.zeros(total_frames)  #  y top edge
+        bottom_edge = np.zeros(total_frames)  #  y bottom edge
 
-        #these are the interpolated edges at the user defined angle increments.
-        left_edge2 = np.zeros(len(coarse_fine))  # x left edge
-        right_edge2 = np.zeros(len(coarse_fine))  # x right edge
-        top_edge2 = np.zeros(len(coarse_fine))  # y top edge
-        bottom_edge2 = np.zeros(len(coarse_fine))  # y bottom edge
+        # these are the interpolated edges at the user defined angle increments.
+        left_edge2 = np.zeros(len(coarse_fine))  #  x left edge
+        right_edge2 = np.zeros(len(coarse_fine))  #  x right edge
+        top_edge2 = np.zeros(len(coarse_fine))  #  y top edge
+        bottom_edge2 = np.zeros(len(coarse_fine))  #  y bottom edge
 
         angle_index = []
         for i in range(len(self.theta)):
@@ -458,7 +466,7 @@ class XRFBoundary(object):
 
         for i in range(total_frames):
             if i>0 and i in angle_index:
-                #calculates incremental boundary shift in position units between adjacent coarse scans.
+                # calculates incremental boundary shift in position units between adjacent coarse scans.
                 temp_index = int(np.where(np.array(angle_index) == i)[0][0])
                 frame_difference = angle_index[temp_index] - angle_index[temp_index-1]
 
@@ -468,7 +476,7 @@ class XRFBoundary(object):
                 diffy2 = (bottom_edge[i]-bottom_edge[angle_index[temp_index-1]])/frame_difference
 
                 for j in range(1,frame_difference):
-                    #adds incremental boundary shift to frames in between coarse scans.
+                    # adds incremental boundary shift to frames in between coarse scans.
                     indx = i - frame_difference + j
                     left_edge[indx] = left_edge[i-frame_difference] + diffx1*j
                     right_edge[indx] = right_edge[i-frame_difference] + diffx2*j
@@ -482,11 +490,11 @@ class XRFBoundary(object):
             top_edge2[i] = top_edge[idx]
             bottom_edge2[i] = bottom_edge[idx]
 
-        # figure()
-        # plt.plot(coarse_ExFine, left_edge, marker = 'o')
-        # plt.plot(coarse_fine, left_edge2, marker = 'o')
-        # plt.legend(['even', 'adjusted'])
-        # show()
+        #  figure()
+        #  plt.plot(coarse_ExFine, left_edge, marker = 'o')
+        #  plt.plot(coarse_fine, left_edge2, marker = 'o')
+        #  plt.legend(['even', 'adjusted'])
+        #  show()
 
         for i in range(len(coarse_fine)):
             x_center = (right_edge2[i] + left_edge2[i])/2
@@ -498,18 +506,19 @@ class XRFBoundary(object):
 
         return self.bounds_positions
 
-    def offset_bounds(self, angle_offset, x_offset, y_offset):
+    def offset_bounds(self, angle_offset, left_offset, right_offset, top_offset, bottom_offset):
         for i in range(1, len(self.bounds_positions)):
+            # [angle, xcenter, xwidth, ycenter, ywidth]
             self.bounds_positions[i-1][0] += angle_offset
-            self.bounds_positions[i-1][1] += (self.bounds_positions[i][1] - self.bounds_positions[i-1][1])*angle_offset
-            self.bounds_positions[i-1][2] += (self.bounds_positions[i][2] - self.bounds_positions[i-1][2])*angle_offset + x_offset*2
-            self.bounds_positions[i-1][3] += (self.bounds_positions[i][3] - self.bounds_positions[i-1][3])*angle_offset
-            self.bounds_positions[i-1][4] += (self.bounds_positions[i][4] - self.bounds_positions[i-1][4])*angle_offset + y_offset*2
+            self.bounds_positions[i-1][1] += (self.bounds_positions[i][1] - self.bounds_positions[i-1][1])*angle_offset + (right_offset - left_offset)
+            self.bounds_positions[i-1][2] += (self.bounds_positions[i][2] - self.bounds_positions[i-1][2])*angle_offset + (right_offset + left_offset)
+            self.bounds_positions[i-1][3] += (self.bounds_positions[i][3] - self.bounds_positions[i-1][3])*angle_offset + (top_offset - bottom_offset)
+            self.bounds_positions[i-1][4] += (self.bounds_positions[i][4] - self.bounds_positions[i-1][4])*angle_offset + (top_offset + bottom_offset)
         self.bounds_positions[-1][0] += angle_offset
-        self.bounds_positions[-1][1] += (self.bounds_positions[-1][1] - self.bounds_positions[-2][1])*angle_offset
-        self.bounds_positions[-1][2] += (self.bounds_positions[-1][2] - self.bounds_positions[-2][2])*angle_offset + x_offset*2
-        self.bounds_positions[-1][3] += (self.bounds_positions[-1][3] - self.bounds_positions[-2][3])*angle_offset
-        self.bounds_positions[-1][4] += (self.bounds_positions[-1][4] - self.bounds_positions[-2][4])*angle_offset + y_offset*2
+        self.bounds_positions[-1][1] += (self.bounds_positions[-1][1] - self.bounds_positions[-2][1])*angle_offset + (right_offset - left_offset)
+        self.bounds_positions[-1][2] += (self.bounds_positions[-1][2] - self.bounds_positions[-2][2])*angle_offset + (right_offset + left_offset)
+        self.bounds_positions[-1][3] += (self.bounds_positions[-1][3] - self.bounds_positions[-2][3])*angle_offset + (top_offset - bottom_offset)
+        self.bounds_positions[-1][4] += (self.bounds_positions[-1][4] - self.bounds_positions[-2][4])*angle_offset + (top_offset + bottom_offset)
 
         for i in range(len(self.bounds_positions)):
             self.bounds_positions[i][0] = round(self.bounds_positions[i][0], 4)
@@ -519,17 +528,17 @@ class XRFBoundary(object):
             self.bounds_positions[i][4] = round(self.bounds_positions[i][4], 4)
         return
 
-    def offset_ROI_bounds(self, x_offset, y_offset):
+    def offset_ROI_bounds(self, left_offset, right_offset, top_offset, bottom_offset):
         coarse_bounds = self.calc_coarse_bounds()
         x_pixel_size = round(coarse_bounds[0][2]/(self.projections[0].shape[1]-1), 4)
         y_pixel_size = round(coarse_bounds[0][4]/(self.projections[0].shape[0]-1), 4)
 
         for i in range(len(self.bounds[0])):
 
-            self.bounds[0][i] -= int(x_offset/x_pixel_size)
-            self.bounds[1][i] += int(x_offset/x_pixel_size)
-            self.bounds[2][i] -= int(y_offset/y_pixel_size)
-            self.bounds[3][i] += int(y_offset/y_pixel_size)
+            self.bounds[0][i] -= int(left_offset/x_pixel_size)
+            self.bounds[1][i] += int(right_offset/x_pixel_size)
+            self.bounds[2][i] -= int(top_offset/y_pixel_size)
+            self.bounds[3][i] += int(bottom_offset/y_pixel_size)
 
         return
 
@@ -543,7 +552,7 @@ class XRFBoundary(object):
         box_width = list(np.array(self.bounds[1]) - np.array(self.bounds[0]))
         box_height = list(np.array(self.bounds[3]) - np.array(self.bounds[2]))
         theta = np.sort(self.theta)
-        # Create new window for every 30 images, applies bounding box
+        #  Create new window for every 30 images, applies bounding box
         rows, columns = 5,6
         frames = rows*columns
         figs = {}

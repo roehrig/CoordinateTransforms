@@ -60,7 +60,7 @@ class ScriptWidget(QWidget):
         self.coordinate_list = []
         self.table_index = 0
 
-        # Create text labels and text boxes for creating a python script
+        #  Create text labels and text boxes for creating a python script
         self.label_template = QLabel('Name of script template')
         self.text_template = QLineEdit()
         self.text_template.setMinimumWidth(500)
@@ -109,7 +109,7 @@ class ScriptWidget(QWidget):
         self.scan_table.setRowCount(10)
         self.scan_table.setColumnCount(10)
         self.scan_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
-#        self.scan_table.setHorizontalHeaderItem(0, QTableWidgetItem('Coordinates'))
+#         self.scan_table.setHorizontalHeaderItem(0, QTableWidgetItem('Coordinates'))
         self.scan_table.setHorizontalHeaderItem(0, QTableWidgetItem('X Center'))
         self.scan_table.setHorizontalHeaderItem(1, QTableWidgetItem('Y Center'))
         self.scan_table.setHorizontalHeaderItem(2, QTableWidgetItem('Z Center'))
@@ -120,7 +120,7 @@ class ScriptWidget(QWidget):
         self.scan_table.setHorizontalHeaderItem(7, QTableWidgetItem('Y Step Size'))
         self.scan_table.setHorizontalHeaderItem(8, QTableWidgetItem('Dwell'))
         self.scan_table.setHorizontalHeaderItem(9, QTableWidgetItem('Copy'))
-#        self.scan_table.setColumnWidth(0, 200)
+#         self.scan_table.setColumnWidth(0, 200)
         for i in range(0, 10):
             self.scan_table.setColumnWidth(i, 100)
 
@@ -157,8 +157,8 @@ class ScriptWidget(QWidget):
         file_tab_vbox.addLayout(hbox)
         self.setLayout(file_tab_vbox)
 
-    # The default signal passes no arguments, so indicate that this should
-    # use the overloaded version that passes an object of type QTableWidgetItem.
+    #  The default signal passes no arguments, so indicate that this should
+    #  use the overloaded version that passes an object of type QTableWidgetItem.
     @pyqtSlot(QTableWidgetItem)
     def on_copy_checkbox_clicked(self, item):
 
@@ -227,7 +227,7 @@ class ScriptWidget(QWidget):
         y_step_list = []
         dwell_list = []
 
-        # Combine the filename and file path
+        #  Combine the filename and file path
         template_name = "{}".format(self.text_template.text())
         file_name = "{}{}{}".format(self.text_path.text(), '/', self.text_file.text())
         log_file_name = "{}{}{}".format(self.text_path.text(), '/', self.log_file.text())
@@ -259,8 +259,8 @@ class ScriptWidget(QWidget):
 
         return
 
-    # The default signal passes no arguments, so indicate that this should
-    # use the overloaded version that passes an object of type QTableWidgetItem.
+    #  The default signal passes no arguments, so indicate that this should
+    #  use the overloaded version that passes an object of type QTableWidgetItem.
     @pyqtSlot(QTableWidgetItem)
     def on_copy_checkbox_clicked(self, item):
 

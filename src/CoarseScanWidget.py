@@ -56,7 +56,7 @@ class CoarseScanWidget(QWidget):
     def __init__(self, parent, path=None):
         super(CoarseScanWidget, self).__init__()
 
-        # self.parent = CreateScriptWidget()
+        #  self.parent = CreateScriptWidget()
         self.parent = parent
         self.scan_boundary = XRFBoundary()
         self.file_path = None
@@ -86,7 +86,7 @@ class CoarseScanWidget(QWidget):
         self.tree_view.setRootIndex(self.dir_model.index('/'))
         self.tree_view.setColumnWidth(0,200)
 
-        # Enable selection of multiple files.
+        #  Enable selection of multiple files.
         self.list_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
         self.select_files_button = QPushButton('Select Files')
@@ -101,11 +101,8 @@ class CoarseScanWidget(QWidget):
         self.select_element_button.setToolTip('Open a window to select an element.')
         self.select_element_button.clicked.connect(self.on_select_element_button_click)
 
-        self.find_bounds_button = QPushButton('Find Bounds')
-        self.find_bounds_button.setStyleSheet('background-color: yellow')
-        self.find_bounds_button.setMaximumSize(200, 25)
-        self.find_bounds_button.setToolTip('Find the values of the image boundaries for each file.')
-        self.find_bounds_button.clicked.connect(self.on_find_bounds_button_click)
+        self.bound_y = QCheckBox("Bound y")
+        self.bound_y.setChecked(True)
 
         self.build_scan_button = QPushButton('Build Scan')
         self.build_scan_button.setStyleSheet('background-color: yellow')
@@ -124,28 +121,28 @@ class CoarseScanWidget(QWidget):
         self.text_x_size = QLineEdit('0.001')
         self.text_x_size.setMinimumWidth(70)
         self.text_x_size.setMaximumSize(70, 20)
-        # self.text_x_size.textChanged.connect(self.enable_build_scan_button)
+        #  self.text_x_size.textChanged.connect(self.enable_build_scan_button)
 
         self.label_y_size = QLabel('Y step size (mm)')
         self.label_y_size.setAlignment(Qt.AlignRight)
         self.text_y_size = QLineEdit('0.001')
         self.text_y_size.setMinimumWidth(70)
         self.text_y_size.setMaximumSize(70, 20)
-        # self.text_y_size.textChanged.connect(self.enable_build_scan_button)
+        #  self.text_y_size.textChanged.connect(self.enable_build_scan_button)
 
         self.label_dwell = QLabel('Dwell time (ms)')
         self.label_dwell.setAlignment(Qt.AlignRight)
         self.text_dwell = QLineEdit('50')
         self.text_dwell.setMinimumWidth(70)
         self.text_dwell.setMaximumSize(70, 20)
-        # self.text_dwell.textChanged.connect(self.enable_build_scan_button)
+        #  self.text_dwell.textChanged.connect(self.enable_build_scan_button)
 
         self.label_angle_offset = QLabel('Angle offset')
         self.label_angle_offset.setAlignment(Qt.AlignRight)
         self.text_angle_offset = QLineEdit('0')
         self.text_angle_offset.setMinimumWidth(70)
         self.text_angle_offset.setMaximumSize(70, 20)
-        # self.text_angle_offset.textChanged.connect(self.enable_build_scan_button)
+        #  self.text_angle_offset.textChanged.connect(self.enable_build_scan_button)
 
         self.label_element = QLabel('Element')
         self.label_element.setAlignment(Qt.AlignRight)
@@ -160,11 +157,17 @@ class CoarseScanWidget(QWidget):
         self.text_coefficient.setMinimumWidth(70)
         self.text_coefficient.setMaximumSize(70, 20)
 
-        self.label_boundary_offset = QLabel('Boundary Offset x,y (mm)')
-        self.label_boundary_offset.setAlignment(Qt.AlignRight)
-        self.text_boundary_offset = QLineEdit('0,0')
-        self.text_boundary_offset.setMinimumWidth(70)
-        self.text_boundary_offset.setMaximumSize(70, 20)
+        self.label_boundary_offset_x = QLabel('X offset left,right (mm)')
+        self.label_boundary_offset_x.setAlignment(Qt.AlignRight)
+        self.text_boundary_offset_x = QLineEdit('0,0')
+        self.text_boundary_offset_x.setMinimumWidth(70)
+        self.text_boundary_offset_x.setMaximumSize(70, 20)
+
+        self.label_boundary_offset_y = QLabel('Y offset top,bottom (mm)')
+        self.label_boundary_offset_y.setAlignment(Qt.AlignRight)
+        self.text_boundary_offset_y = QLineEdit('0,0')
+        self.text_boundary_offset_y.setMinimumWidth(70)
+        self.text_boundary_offset_y.setMaximumSize(70, 20)
 
         self.label_theta = QLabel('Angle Increment')
         self.label_theta.setAlignment(Qt.AlignRight)
@@ -185,16 +188,16 @@ class CoarseScanWidget(QWidget):
         self.text_num_files.setText('0 Files Selected')
 
         self.select_element_button.setDisabled(True)
-        self.find_bounds_button.setDisabled(True)
         self.show_plots_button.setDisabled(True)
         self.build_scan_button.setDisabled(True)
 
         grid_layout = QGridLayout()
         grid_layout.addWidget(self.select_files_button, 0, 0)
         grid_layout.addWidget(self.select_element_button, 1, 0)
-        grid_layout.addWidget(self.find_bounds_button, 2, 0)
+
         grid_layout.addWidget(self.text_num_files, 0, 1)
         grid_layout.addWidget(self.show_plots_button, 1, 1)
+        grid_layout.addWidget(self.bound_y,2,0)
         grid_layout.addWidget(self.build_scan_button, 2, 1)
 
         grid_layout.addWidget(self.label_x_size, 0, 2)
@@ -209,13 +212,15 @@ class CoarseScanWidget(QWidget):
         grid_layout.addWidget(self.label_element, 3, 2)
         grid_layout.addWidget(self.label_angle_offset, 1, 4)
         grid_layout.addWidget(self.label_coefficient, 2, 4)
-        grid_layout.addWidget(self.label_boundary_offset, 3, 4)
-        grid_layout.addWidget(self.label_stage_pv, 4, 4)
+        grid_layout.addWidget(self.label_boundary_offset_x, 3, 4)
+        grid_layout.addWidget(self.label_boundary_offset_y, 4, 4)
+        grid_layout.addWidget(self.label_stage_pv, 4, 2)
         grid_layout.addWidget(self.text_element, 3, 3)
         grid_layout.addWidget(self.text_angle_offset, 1, 5)
         grid_layout.addWidget(self.text_coefficient, 2, 5)
-        grid_layout.addWidget(self.text_boundary_offset, 3, 5)
-        grid_layout.addWidget(self.text_stage_pv, 4, 5)
+        grid_layout.addWidget(self.text_boundary_offset_x, 3, 5)
+        grid_layout.addWidget(self.text_boundary_offset_y, 4, 5)
+        grid_layout.addWidget(self.text_stage_pv, 4, 3)
 
         widget_layout = QVBoxLayout()
         widget_layout.addLayout(files_hbox)
@@ -252,9 +257,6 @@ class CoarseScanWidget(QWidget):
     def on_select_files_button_click(self):
 
         stage_pv = self.text_stage_pv.text()
-        # temporary hard-coded file path for rapid debugging
-        # self.file_path = "/home/fabricio/scans/coarsescan"
-        # self.file_list = ['2xfm_0043.h5', '2xfm_0044.h5', '2xfm_0045.h5', '2xfm_0046.h5', '2xfm_0047.h5', '2xfm_0048.h5', '2xfm_0049.h5']
         if self.file_path is None or stage_pv is '':
             err_msg = QMessageBox()
             err_msg.setIcon(QMessageBox.Critical)
@@ -297,39 +299,42 @@ class CoarseScanWidget(QWidget):
         for key, value in elem_dict.items():
             if value.isChecked():
                 self.text_element.setText(key)
-                self.find_bounds_button.setDisabled(False)
-
+                self.build_scan_button.setDisabled(False)
         return
 
-    def on_find_bounds_button_click(self):
-
+    def on_build_scan_button_click(self):
         coefficient = int(self.text_coefficient.text())
         element = self.text_element.text()
         dtheta = float(self.text_theta.text())
         angle_offset = float(self.text_angle_offset.text())
         try:
-            x_offset, y_offset = self.text_boundary_offset.text().split(',')
-            x_offset = float(x_offset)
-            y_offset = float(y_offset)
+            left_offset, right_offset = self.text_boundary_offset_x.text().split(',')
+            top_offset, bottom_offset = self.text_boundary_offset_y.text().split(',')
+
+            left_offset = float(left_offset)
+            right_offset = float(right_offset)
+            top_offset = float(top_offset)
+            bottom_offset = float(bottom_offset)
+
         except:
             print("invalid format: try 'x_offset (mm),y_offset (mm)")
-            x_offset, y_offset = [0,0]
-            x_offset = float(x_offset)
-            y_offset = float(y_offset)
+            left_offset, right_offset = [0,0]
+            top_offset, bottom_offset = [0,0]
+            left_offset = float(left_offset)
+            right_offset = float(right_offset)
+            top_offset = float(top_offset)
+            bottom_offset = float(bottom_offset)
 
         element_index = self.scan_boundary.get_element_index(element)
-        self.scan_boundary.calc_xy_bounds(coefficient, element_index)
+        self.scan_boundary.calc_xy_bounds(coefficient, element_index, self.bound_y.isChecked())
         self.scan_boundary.interpolate_bounds(dtheta)
-        self.scan_boundary.offset_bounds(angle_offset, x_offset, y_offset)
-        self.scan_boundary.offset_ROI_bounds(x_offset, y_offset)
+        self.scan_boundary.offset_bounds(angle_offset, left_offset, right_offset, top_offset, bottom_offset)
+        self.scan_boundary.offset_ROI_bounds(left_offset, right_offset, top_offset, bottom_offset)
         self.scan_params = self.scan_boundary.get_boundaries()
 
         self.show_plots_button.setDisabled(False)
         self.build_scan_button.setDisabled(False)
-        # self.enable_build_scan_button()
-        return
-
-    def on_build_scan_button_click(self):
+        #  self.enable_build_scan_button()
 
         self.scan_params2 = []
         self.x_pixel_size = self.text_x_size.text()
@@ -338,16 +343,16 @@ class CoarseScanWidget(QWidget):
         coordinate_list = []
 
         self.parent.file_tab.scan_table.setRowCount(len(self.scan_params))
-        for i in range(len(self.scan_params)): #i is the row number
-            self.parent.file_tab.scan_table.setItem(i,0,QTableWidgetItem(str(self.scan_params[i][1]))) # x center
-            self.parent.file_tab.scan_table.setItem(i,1,QTableWidgetItem(str(self.scan_params[i][3]))) # y center
-            self.parent.file_tab.scan_table.setItem(i,2,QTableWidgetItem(str(0))) # z center
-            self.parent.file_tab.scan_table.setItem(i,3,QTableWidgetItem(str(self.scan_params[i][0]))) # theta
-            self.parent.file_tab.scan_table.setItem(i,4,QTableWidgetItem(str(self.scan_params[i][2]))) # x width
-            self.parent.file_tab.scan_table.setItem(i,5,QTableWidgetItem(str(self.x_pixel_size))) # x step_size
-            self.parent.file_tab.scan_table.setItem(i,6,QTableWidgetItem(str(self.scan_params[i][4]))) # y width
-            self.parent.file_tab.scan_table.setItem(i,7,QTableWidgetItem(str(self.y_pixel_size))) # y step_sze
-            self.parent.file_tab.scan_table.setItem(i,8,QTableWidgetItem(str(self.dwell_time))) # dwell time
+        for i in range(len(self.scan_params)): # i is the row number
+            self.parent.file_tab.scan_table.setItem(i,0,QTableWidgetItem(str(self.scan_params[i][1]))) #  x center
+            self.parent.file_tab.scan_table.setItem(i,1,QTableWidgetItem(str(self.scan_params[i][3]))) #  y center
+            self.parent.file_tab.scan_table.setItem(i,2,QTableWidgetItem(str(0))) #  z center
+            self.parent.file_tab.scan_table.setItem(i,3,QTableWidgetItem(str(self.scan_params[i][0]))) #  theta
+            self.parent.file_tab.scan_table.setItem(i,4,QTableWidgetItem(str(self.scan_params[i][2]))) #  x width
+            self.parent.file_tab.scan_table.setItem(i,5,QTableWidgetItem(str(self.x_pixel_size))) #  x step_size
+            self.parent.file_tab.scan_table.setItem(i,6,QTableWidgetItem(str(self.scan_params[i][4]))) #  y width
+            self.parent.file_tab.scan_table.setItem(i,7,QTableWidgetItem(str(self.y_pixel_size))) #  y step_sze
+            self.parent.file_tab.scan_table.setItem(i,8,QTableWidgetItem(str(self.dwell_time))) #  dwell time
 
             coordinate_list.append((self.scan_params[i][1], self.scan_params[i][3], 0, self.scan_params[i][0],
                                     self.scan_params[i][1], self.scan_params[i][3]))

@@ -62,21 +62,21 @@ class App(QWidget):
         self.width = 1125
         self.height = 517
         self.layout = None
-        self.table_index = 0  # This is the table row.
+        self.table_index = 0  #  This is the table row.
         self.config_dir = None
 
         config_param_dict = self.load_config_file()
         self.config_dir = config_param_dict['config_dir']
         self.pv_prefix = config_param_dict['pv_prefix']
 
-        # Create variables for each tab
+        #  Create variables for each tab
         self.tabs = None
         self.table_tab = None
         self.file_tab = None
         self.run_tab = None
         self.coarse_scan_tab = None
 
-        # Create variables for two buttons
+        #  Create variables for two buttons
         self.clearTableButton = None
         self.removeRowButton = None
         self.loadConfigButton = None
@@ -98,23 +98,23 @@ class App(QWidget):
         self.run_tab = RunWidget(self)
         self.coarse_scan_tab = CoarseScanWidget(self)
 
-        # Create all of the gui widgets.
+        #  Create all of the gui widgets.
         self.create_buttons()
 
-        # Place the widgets on the window.
+        #  Place the widgets on the window.
         self.create_layout()
 
-        # Put values from the loaded configuration file into the widgets.
+        #  Put values from the loaded configuration file into the widgets.
         self.set_default_values(config_dict)
 
-        # Show widgets
+        #  Show widgets
         self.show()
 
         return
 
     def create_buttons(self):
 
-        # Create four buttons and assign functions to the click event
+        #  Create four buttons and assign functions to the click event
 
         self.clearTableButton = QPushButton("Clear Table")
         self.clearTableButton.setStyleSheet('background-color: yellow')
@@ -140,13 +140,13 @@ class App(QWidget):
 
     def create_layout(self):
 
-        # Add widgets to each tab
+        #  Add widgets to each tab
         self.tabs.addTab(self.table_tab, 'Coordinates')
         self.tabs.addTab(self.coarse_scan_tab, 'Coarse Scans')
         self.tabs.addTab(self.file_tab, 'Create Script')
         self.tabs.addTab(self.run_tab, 'Run Script')
 
-        # Create vertical layouts for the buttons
+        #  Create vertical layouts for the buttons
         button_vbox1 = QVBoxLayout()
         button_vbox1.addWidget(self.clearTableButton)
         button_vbox1.addWidget(self.removeRowButton)
@@ -155,12 +155,12 @@ class App(QWidget):
         button_vbox2.addWidget(self.loadConfigButton)
         button_vbox2.addWidget(self.saveConfigButton)
 
-        # Create a horizontal layout for the buttons.
+        #  Create a horizontal layout for the buttons.
         hbox = QHBoxLayout()
         hbox.addLayout(button_vbox1)
         hbox.addLayout(button_vbox2)
 
-        # Create a vertical layout and add the tabs and buttons
+        #  Create a vertical layout and add the tabs and buttons
         vbox = QVBoxLayout()
         vbox.addWidget(self.tabs)
         vbox.addLayout(hbox)
@@ -187,7 +187,7 @@ class App(QWidget):
 
         return
 
-    # Clear all entries from both tables
+    #  Clear all entries from both tables
     @pyqtSlot()
     def on_clear_table_button_click(self):
 
@@ -225,7 +225,7 @@ class App(QWidget):
         self.config_dir = os.path.dirname(file_name[0])
         try:
             with open(file_name[0], 'w') as config_file:
-                # Put some comments in the file.
+                #  Put some comments in the file.
                 config_file.write('Here is the structure of this file:\n')
                 config_file.write('     The date and time the file was written.\n')
                 config_file.write('     The directory that this file is in.\n')
@@ -243,24 +243,24 @@ class App(QWidget):
                 config_file.write('     The change in angle between 2D scans.\n')
                 config_file.write('     The element to use from coarse tomo scans.\n')
                 config_file.write('     The scaling parameter for finding sample boundaries.\n')
-                # Write the current date and time.
+                #  Write the current date and time.
                 config_file.write('{}\n'.format(datetime.datetime.now()))
-                # Write the save directory
+                #  Write the save directory
                 config_file.write('{}\n'.format(self.config_dir))
-                # Write the PV prefix
+                #  Write the PV prefix
                 config_file.write('{}\n'.format(self.pv_prefix))
-                # Write the from the coordinate table tab.
+                #  Write the from the coordinate table tab.
                 config_file.write('{}\n'.format(str(self.table_tab.useTextValuesRadioButton.isChecked())))
                 config_file.write('{}\n'.format(str(self.table_tab.usePVValuesRadioButton.isChecked())))
                 config_file.write('{}\n'.format(self.table_tab.textT.text()))
-                # Write values from the create scan tab.
+                #  Write values from the create scan tab.
                 config_file.write('{}\n'.format(str(self.file_tab.useThetaCheckBox.isChecked())))
                 config_file.write('{}\n'.format(str(self.file_tab.useZCheckBox.isChecked())))
                 config_file.write('{}\n'.format(self.file_tab.text_template.text()))
                 config_file.write('{}\n'.format(self.file_tab.text_path.text()))
                 config_file.write('{}\n'.format(self.file_tab.text_file.text()))
                 config_file.write('{}\n'.format(self.file_tab.log_file.text()))
-                # Write values from the coarse scan tab.
+                #  Write values from the coarse scan tab.
                 config_file.write('{}\n'.format(self.coarse_scan_tab.text_stage_pv.text()))
                 config_file.write('{}\n'.format(self.coarse_scan_tab.text_theta.text()))
                 config_file.write('{}\n'.format(self.coarse_scan_tab.text_element.text()))

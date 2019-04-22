@@ -37,18 +37,22 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 '''
 
-
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtCore, QtGui
 import os
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from pylab import *
-
-
-class XRFBoundary(object):
-
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import *
+class XRFBoundary(QWidget):
+    roiChangedSig = pyqtSignal(list, name = "roiChangedSig" )
     def __init__(self):
+        super(XRFBoundary, self).__init__()
+
+        # def __init__(self):
 
         self.file_names = {}
         self.theta = []             #  A list of rotation stage positions from the scan.
@@ -222,7 +226,6 @@ class XRFBoundary(object):
             y_positions = self.hdf_files[i]["MAPS"]["y_axis"][:]
 
             #  Calculate background noise/coeff, edges, width, and center
-
             #  Create an array where each element is a sum of a column in the scan data.
             #  It will be a 1D array of size equal to the number of columns.
             column_sums = np.sum(projection, axis=0) / dim_y
@@ -303,7 +306,6 @@ class XRFBoundary(object):
     def calc_coarse_bounds(self):
         """
         This function finds the bounding regions of each coarse scan in physical position units.
-
         :return:
 
         """
@@ -328,143 +330,50 @@ class XRFBoundary(object):
     def interpolate_bounds(self, dtheta):
         '''
         This function interpolates boundary parameters for fine scans from coarse
-        scan boundary information (self.bounds)
+        scan boundary information. It selects parameters from a lookup table regardless
+        of whether or not the sampeld values were original or interpolated values.
 
         :param dtheta: Incremental angle value between tomography scans
         :type  dtheta: float
 
         :return:
         '''
-        # identify whether or not adjacet coarse scan angle differnce is divides evenly by input
-        # angle increment
-        angle_diff = []
-        for i in range(len(self.theta)-1):
-            angle_diff.append(self.theta[i+1]-self.theta[i])
-        for i in angle_diff:
-            if i%dtheta != 0:
-                self.interpolate_bounds2(dtheta)
-                return
-            else:
-                continue
-
-        #  gets initial angle from self.theta
-        first_angle= self.theta[0]
-        # gets last angle from self.theta
-        last_angle= self.theta[::-1][0]
-        # calculates all fine_scan angles
-        all_theta = np.arange(first_angle,last_angle+dtheta,dtheta)
-        # calculates total number of fine scans from coarse scans and angle icrement
-        total_frames = len(all_theta)
+        self.dtheta = dtheta
+        theta_coarse = self.theta
+        ExFine = np.round(np.arange(self.theta[0],self.theta[-1]+0.1,0.1),2)
+        fine = np.arange(self.theta[0],self.theta[-1], dtheta)
+        fine = np.round(fine, 2)
+        num_projections = len(fine)
+        num_exFine = len(ExFine)
 
         self.bounds_positions = []
         x_positions = self.hdf_files[0]["MAPS"]["x_axis"][:]
         y_positions = self.hdf_files[0]["MAPS"]["y_axis"][:]
 
-        # initialise interpolated boundaries to zero-valued array of length(total_frames)
-        all_edges = {}
-        all_edges[0] = np.zeros(total_frames)  #  x left edge
-        all_edges[1] = np.zeros(total_frames)  #  x right edge
-        all_edges[2] = np.zeros(total_frames)  #  y top edge
-        all_edges[3] = np.zeros(total_frames)  #  y bottom edge
-                
-
-        # assigns known boundaries from coarse scans to new dictionary containing physical positions
-        angle_index = []
-        for i in range(len(self.theta)):
-            temp_index = int(np.where(all_theta == self.theta[i])[0][0])
-            angle_index.append(temp_index)
-            all_edges[0][temp_index] = x_positions[int(self.bounds[0][i])]
-            all_edges[1][temp_index] = x_positions[int(self.bounds[1][i])]
-            all_edges[2][temp_index] = y_positions[int(self.bounds[2][i])]
-            all_edges[3][temp_index] = y_positions[int(self.bounds[3][i])]
-
-        for i in range(total_frames):
-
-            if i>0 and i in angle_index:
-                # calculates incremental boundary shift in position units between adjacent coarse scans.
-                temp_index = int(np.where(np.array(angle_index) == i)[0][0])
-                frame_difference = angle_index[temp_index] - angle_index[temp_index-1]
-
-                diffx1 = (all_edges[0][i]-all_edges[0][angle_index[temp_index-1]])/frame_difference
-                diffx2 = (all_edges[1][i]-all_edges[1][angle_index[temp_index-1]])/frame_difference
-                diffy1 = (all_edges[2][i]-all_edges[2][angle_index[temp_index-1]])/frame_difference
-                diffy2 = (all_edges[3][i]-all_edges[3][angle_index[temp_index-1]])/frame_difference
-
-                for j in range(1,frame_difference):
-                    # adds incremental boundary shift to frames in between coarse scans.
-                    indx = i - frame_difference + j
-                    all_edges[0][indx] = all_edges[0][i-frame_difference] + diffx1*j
-                    all_edges[1][indx] = all_edges[1][i-frame_difference] + diffx2*j
-                    all_edges[2][indx] = all_edges[2][i-frame_difference] + diffy1*j
-                    all_edges[3][indx] = all_edges[3][i-frame_difference] + diffy2*j
-
-            # boundary parameters using physical positions
-        for i in range(total_frames):
-            x_center = (all_edges[1][i] + all_edges[0][i])/2
-            x_width = all_edges[1][i] - all_edges[0][i]
-            y_center = (all_edges[3][i] + all_edges[2][i])/2
-            y_width = all_edges[3][i] - all_edges[2][i]
-            pos_temp = list([all_theta[i], x_center,x_width,y_center,y_width])
-            self.bounds_positions.append(pos_temp)
-
-        #  Creates and writes to file
-        out_pos = open('xyBounds.txt', 'w')
-        out_pos.write('angle x_center x_width y_center y_width \n')
-        format_string = '{angle:.3f}, {x_center:.3f}, {x_width:.3f}, {y_center:.3f}, {y_width:.3f},\n'
-        for i in self.bounds_positions:
-            format_dict = {'angle': i[0], 'x_center': i[1], 'x_width': i[2],
-                           'y_center': i[3], 'y_width': i[4]}
-            out_pos.write(format_string.format(**format_dict))
-        out_pos.close()
-        return self.bounds_positions
-
-    def interpolate_bounds2(self, dtheta):
-        '''
-        This function interpolates boundary parameters for fine scans from coarse
-        scan boundary information (self.bounds)
-
-        :param dtheta: Incremental angle value between tomography scans
-        :type  dtheta: float
-
-        :return:
-        '''
-        coarse = self.theta
-        ExFine = np.arange(self.theta[0],self.theta[-1],0.1)
-        fine = np.arange(self.theta[0],self.theta[-1],dtheta)
-        coarse_ExFine = np.unique(np.concatenate((coarse,ExFine),0))
-        coarse_fine = np.unique(np.concatenate((coarse,fine),0))
-        lin_space = np.linspace(self.theta[0],self.theta[-1],len(coarse_ExFine))
-        ratio = coarse_ExFine/lin_space
-        ratio[np.isnan(ratio)] = 1
-        ratio = ratio - 1
-        total_frames = len(lin_space)
-
-        self.bounds_positions = []
-        x_positions = self.hdf_files[0]["MAPS"]["x_axis"][:]
-        y_positions = self.hdf_files[0]["MAPS"]["y_axis"][:]
-
-        # thes are the interpolated edges at 0.5 degree increments, they will serve as a lookup table.
-        left_edge = np.zeros(total_frames)  #  x left edge
-        right_edge = np.zeros(total_frames)  #  x right edge
-        top_edge = np.zeros(total_frames)  #  y top edge
-        bottom_edge = np.zeros(total_frames)  #  y bottom edge
+        # thes are the interpolated edges at 0.1 degree increments, they will serve as a lookup table.
+        left_edge = np.zeros(num_exFine)  #  x left edge
+        right_edge = np.zeros(num_exFine)  #  x right edge
+        top_edge = np.zeros(num_exFine)  #  y top edge
+        bottom_edge = np.zeros(num_exFine)  #  y bottom edge
 
         # these are the interpolated edges at the user defined angle increments.
-        left_edge2 = np.zeros(len(coarse_fine))  #  x left edge
-        right_edge2 = np.zeros(len(coarse_fine))  #  x right edge
-        top_edge2 = np.zeros(len(coarse_fine))  #  y top edge
-        bottom_edge2 = np.zeros(len(coarse_fine))  #  y bottom edge
+        left_edge2 = np.zeros(num_projections)  #  x left edge
+        right_edge2 = np.zeros(num_projections)  #  x right edge
+        top_edge2 = np.zeros(num_projections)  #  y top edge
+        bottom_edge2 = np.zeros(num_projections)  #  y bottom edge
 
         angle_index = []
+
+        # pupulates scan_parameters with non-interpolated values
         for i in range(len(self.theta)):
-            temp_index = int(np.where(coarse_ExFine == self.theta[i])[0][0])
+            temp_index = int(np.where(ExFine == self.theta[i])[0])
             angle_index.append(temp_index)
             left_edge[temp_index] = x_positions[int(self.bounds[0][i])]
             right_edge[temp_index] = x_positions[int(self.bounds[1][i])]
             top_edge[temp_index] = y_positions[int(self.bounds[2][i])]
             bottom_edge[temp_index] = y_positions[int(self.bounds[3][i])]
 
-        for i in range(total_frames):
+        for i in range(num_exFine):
             if i>0 and i in angle_index:
                 # calculates incremental boundary shift in position units between adjacent coarse scans.
                 temp_index = int(np.where(np.array(angle_index) == i)[0][0])
@@ -483,25 +392,19 @@ class XRFBoundary(object):
                     top_edge[indx] = top_edge[i-frame_difference] + diffy1*j
                     bottom_edge[indx] = bottom_edge[i-frame_difference] + diffy2*j
 
-        for i in range(len(coarse_fine)):
-            idx = np.abs(coarse_ExFine-coarse_fine[i]).argmin()
+        for i in range(num_projections):
+            idx = int(np.where(ExFine == fine[i])[0][0])
             left_edge2[i] = left_edge[idx]
             right_edge2[i] = right_edge[idx]
             top_edge2[i] = top_edge[idx]
             bottom_edge2[i] = bottom_edge[idx]
 
-        #  figure()
-        #  plt.plot(coarse_ExFine, left_edge, marker = 'o')
-        #  plt.plot(coarse_fine, left_edge2, marker = 'o')
-        #  plt.legend(['even', 'adjusted'])
-        #  show()
-
-        for i in range(len(coarse_fine)):
+        for i in range(num_projections):
             x_center = (right_edge2[i] + left_edge2[i])/2
             x_width = right_edge2[i] - left_edge2[i]
             y_center = (bottom_edge2[i] + top_edge2[i])/2
             y_width = bottom_edge2[i] - top_edge2[i]
-            pos_temp = list([coarse_fine[i],x_center,x_width,y_center,y_width])
+            pos_temp = list([fine[i],x_center,x_width,y_center,y_width])
             self.bounds_positions.append(pos_temp)
 
         return self.bounds_positions
@@ -561,6 +464,7 @@ class XRFBoundary(object):
             counter += 1
             projection = self.projections[i]
             for j in range(int(len(theta) / frames) + (len(theta) % frames > 0)):
+
                 j += 1
                 ax = plt.subplot(rows,columns, counter - (int((counter - 1) / frames)) * frames)
                 if counter == (j - 1) * frames:
@@ -578,3 +482,169 @@ class XRFBoundary(object):
         plt.show()
         return
 
+    def show_roi_box2(self):
+        """
+        Display images from scan data and add a box to indicate the sample boundaries found in calc_xy_bounds().
+
+        :return:
+        """
+        #open new window containing coasre scan projections. 
+        pg.setConfigOptions(imageAxisOrder='row-major')
+        # app = QtGui.QApplication([])
+        num_coarse_scans = len(self.theta)
+        proj_w = self.projections[0].shape[1]
+        proj_h = self.projections[0].shape[0]
+        sqrt_length = np.sqrt(num_coarse_scans)
+        cols = int(np.ceil(sqrt_length))
+        rows = int(np.ceil(sqrt_length))
+        xovery_scale = proj_h/proj_w
+
+        if proj_w >= proj_h:
+            ratio = proj_w//proj_h
+            cols -= 1
+            rows += 1
+            if ratio > 3:
+                ratio = 3
+            screen_w = 110*ratio*cols
+            screen_h = 110*rows
+
+        if proj_w <proj_h:
+            ratio = proj_h//proj_w
+            cols += 1
+            rows -= 1
+            if ratio > 3:
+                ratio = 3
+            screen_w = 110*proj_w
+            screen_h = 110*ratio*rows
+
+
+        self.w = pg.GraphicsWindow(size=(screen_w,screen_h), border=True)
+        self.w.setWindowTitle('Coarse scan ROIs')
+
+        # self.w.scene().sigMouseClicked.connect(self.get_window)
+
+
+        self.windowz = {}
+        views = {}
+        cntr = 0
+        theta = np.sort(self.theta)
+        self.box_width = list(np.array(self.bounds[1]) - np.array(self.bounds[0]))
+        self.box_height = list(np.array(self.bounds[3]) - np.array(self.bounds[2]))
+
+        for i in range(rows):
+            for j in range(cols):
+                if cntr == num_coarse_scans:
+                    break
+                else:
+                    projection = self.projections[cntr]
+                    self.windowz[cntr] = self.w.addLayout(row=i, col=j)
+                    views[cntr,0] = self.windowz[cntr].addLabel(str(cntr)+": "+ str(theta[cntr]), row=0, col=0)
+                    views[cntr,1] = self.windowz[cntr].addViewBox(row=1, col=0, lockAspect=True, enableMouse=False)
+                    views[cntr,1].setAspectLocked(lock=True, ratio=xovery_scale)
+                    img = pg.ImageItem(projection)
+                    # img.rotate(90)
+                    views[cntr,1].addItem(img)
+                    views[cntr,1].disableAutoRange('xy')
+                    views[cntr,1].autoRange()
+                    roi = pg.RectROI([self.bounds[0][cntr], self.bounds[2][cntr]], [self.box_width[cntr], self.box_height[cntr]], pen=pg.mkPen(width=4.5, color='r'), translateSnap=True, scaleSnap=True)
+                    ## handles scaling vertically from opposite edge
+                    roi.addScaleHandle([0.5, 0], [0.5, 1])
+                    roi.addScaleHandle([0.5, 1], [0.5, 0])
+                    ## handles scaling horizonatally from opposite edge
+                    roi.addScaleHandle([0, 0.5], [1, 0.5])
+                    roi.addScaleHandle([1, 0.5], [0, 0.5])
+                    ## handles scaling both vertically and horizontally
+                    roi.addScaleHandle([1, 1], [0, 0])
+                    roi.addScaleHandle([0, 0], [1, 1])
+                    roi.addScaleHandle([0, 1], [1, 0])
+                    roi.addScaleHandle([1, 0], [0, 1])
+                    roi.sigRegionChangeFinished.connect(self.update_roi)
+                    pg.mkPen(width=2)
+                    views[cntr,1].addItem(roi)
+                    cntr += 1
+
+        return self.w 
+        
+    def update_roi(self, roi):
+        self.current_x = self.w.scene().clickEvents[0].scenePos().x()
+        self.current_y = self.w.scene().clickEvents[0].scenePos().y()
+        self.indx = self.get_window(self.current_x, self.current_y)
+
+        roi_left =roi.pos().x()
+        roi_right = roi.pos().x() + roi.size().x()
+        roi_top = roi.pos().y() + roi.size().y()
+        roi_bottom = roi.pos().y()
+
+        #check whether any of the ROI edges are out of bounds, if they are, set the ROI box
+        # edge to the edge boundary and update self.bounds accordingly.
+
+        max_x = self.projections[0].shape[1]
+        max_y = self.projections[0].shape[0]
+        valid_flag = True
+
+        ## if way far left or way far right
+        if ((roi_left <= 0 and roi_right<=0) or (roi_left >= max_x and roi_right>= max_x)):
+            print("case 1")
+            roi_left = 0
+            roi_right = max_x-1
+            valid_flag = False
+        ## if way far above or way far below.
+        if ((roi_top <= 0 and roi_bottom<=0) or (roi_top >= max_y and roi_bottom>=max_y)):
+            print("case 2")
+            roi_top = max_y-1
+            roi_bottom = 0
+            valid_flag = False
+        ## if partially left
+        if roi_left < 0:
+            print("case 3")
+            roi_left = 0
+            valid_flag = False
+        ##if partially right
+        if roi_right >= max_x:
+            print("case 4")
+            roi_right = max_x-1
+            valid_flag = False
+        ##if partially above
+        if roi_top >= max_y:
+            print("case 5")
+            roi_top = max_y-1
+            valid_flag = False
+        #if partially below
+        if roi_bottom < 0:
+            print("case 6")
+            roi_bottom = 0
+            valid_flag = False
+
+        try:
+            if valid_flag == False:
+                roi.setSize([roi_right-roi_left,roi_top-roi_bottom], finish=False)
+                roi.setPos(roi_left,roi_bottom, finish=False)
+        except e:
+            print(e)
+
+        self.bounds[0][self.indx] = roi_left
+        self.bounds[1][self.indx] = roi_right
+        self.bounds[2][self.indx] = roi_bottom
+        self.bounds[3][self.indx] = roi_top
+
+        new_bounds = self.interpolate_bounds(self.dtheta)
+        new_bounds = np.round(new_bounds,4).tolist()
+        self.roiChangedSig.emit(new_bounds)
+        return self.w
+
+    def get_window(self, x, y):
+        self.height = self.w.viewRect().height()
+        self.width = self.w.viewRect().width()
+
+        self.rows = len(self.w.ci.rows)
+        self.cols = len(self.w.ci.rows[0])
+        
+        self.grid_x_size = self.width/self.cols
+        self.grid_y_size = self.height/self.rows
+
+        self.win_coord_x = x//self.grid_x_size
+        self.win_coord_y = y//self.grid_y_size
+
+        #gettting index from coordinates:
+        indx = int(self.win_coord_y*self.cols+self.win_coord_x)
+        return indx

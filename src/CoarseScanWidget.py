@@ -49,16 +49,16 @@ except ImportError:
     from PyQt5.QtGui import *
     from PyQt5.QtCore import *
     from PyQt5.QtWidgets import *
-
+from PyQt5.QtCore import pyqtSignal
 
 class CoarseScanWidget(QWidget):
-
     def __init__(self, parent, path=None):
         super(CoarseScanWidget, self).__init__()
 
         #  self.parent = CreateScriptWidget()
         self.parent = parent
         self.scan_boundary = XRFBoundary()
+        self.scan_boundary.roiChangedSig.connect(self.bounds_changed)
         self.file_path = None
         self.file_list = None
         self.scan_params = None
@@ -110,7 +110,7 @@ class CoarseScanWidget(QWidget):
         self.build_scan_button.setToolTip('Calculate build scan parameters from boundaries.')
         self.build_scan_button.clicked.connect(self.on_build_scan_button_click)
 
-        self.show_plots_button = QPushButton('Show Plots')
+        self.show_plots_button = QPushButton('Adjust ROIs')
         self.show_plots_button.setStyleSheet('background-color: yellow')
         self.show_plots_button.setMaximumSize(200, 25)
         self.show_plots_button.setToolTip('Show plots with calculated boundaries.')
@@ -122,6 +122,11 @@ class CoarseScanWidget(QWidget):
         self.text_x_size.setMinimumWidth(70)
         self.text_x_size.setMaximumSize(70, 20)
         #  self.text_x_size.textChanged.connect(self.enable_build_scan_button)
+
+        self.label_ETA = QLabel('ETA hours:min:seconds')
+        self.label_ETA.setAlignment(Qt.AlignLeft)
+        self.text_ETA = QLineEdit('0: 0: 0')
+        self.text_ETA.setMaximumSize(200, 25)
 
         self.label_y_size = QLabel('Y step size (mm)')
         self.label_y_size.setAlignment(Qt.AlignRight)
@@ -194,11 +199,13 @@ class CoarseScanWidget(QWidget):
         grid_layout = QGridLayout()
         grid_layout.addWidget(self.select_files_button, 0, 0)
         grid_layout.addWidget(self.select_element_button, 1, 0)
+        grid_layout.addWidget(self.build_scan_button, 2, 0)
+        grid_layout.addWidget(self.show_plots_button, 3, 0)
+        grid_layout.addWidget(self.label_ETA,4,0)
 
         grid_layout.addWidget(self.text_num_files, 0, 1)
-        grid_layout.addWidget(self.show_plots_button, 1, 1)
-        grid_layout.addWidget(self.bound_y,2,0)
-        grid_layout.addWidget(self.build_scan_button, 2, 1)
+        grid_layout.addWidget(self.bound_y,2,1)
+        grid_layout.addWidget(self.text_ETA,4,1)
 
         grid_layout.addWidget(self.label_x_size, 0, 2)
         grid_layout.addWidget(self.label_y_size, 1, 2)
@@ -246,16 +253,21 @@ class CoarseScanWidget(QWidget):
     def on_directory_clicked(self, index):
 
         self.file_path = self.dir_model.fileInfo(index).absoluteFilePath()
+        #tmp
+        # self.file_path = '/home/fabricio/scans/coarsescan'
         self.list_view.clear()
         file_list = os.listdir(self.file_path)
+        #tmp
+        # file_list = ['2xfm_0046.h5', '2xfm_0047.h5', '2xfm_0048.h5', '2xfm_0049.h5', '2xfm_0044.h5', '2xfm_0045.h5', '2xfm_0043.h5']
         for file in file_list:
             if '.h5' in file:
                 self.list_view.addItem(file)
-
         return
 
     def on_select_files_button_click(self):
-
+        #tmp
+        # self.file_path = '/home/fabricio/scans/coarsescan'
+        # self.file_list = ['2xfm_0046.h5', '2xfm_0047.h5', '2xfm_0048.h5', '2xfm_0049.h5', '2xfm_0044.h5', '2xfm_0045.h5', '2xfm_0043.h5']
         stage_pv = self.text_stage_pv.text()
         if self.file_path is None or stage_pv is '':
             err_msg = QMessageBox()
@@ -265,7 +277,6 @@ class CoarseScanWidget(QWidget):
             err_msg.setDetailedText('Please make sure that files have been selected in the browser window and a valid'
                                     ' PV has been given for the rotation stage.')
             err_msg.setStandardButtons(QMessageBox.Ok)
-
             ret_val = err_msg.exec_()
 
             return
@@ -274,7 +285,6 @@ class CoarseScanWidget(QWidget):
             self.select_element_button.setDisabled(False)
             num_files = len(self.scan_boundary.get_hdf_file_list())
             self.text_num_files.setText('{} Files Selected'.format(num_files))
-
 
         if num_files <= 2:
             err_msg = QMessageBox()
@@ -300,6 +310,10 @@ class CoarseScanWidget(QWidget):
             if value.isChecked():
                 self.text_element.setText(key)
                 self.build_scan_button.setDisabled(False)
+
+        #tmp
+        # self.text_element.setText('TFY')
+        self.build_scan_button.setDisabled(False)
         return
 
     def on_build_scan_button_click(self):
@@ -358,10 +372,54 @@ class CoarseScanWidget(QWidget):
                                     self.scan_params[i][1], self.scan_params[i][3]))
 
         self.parent.file_tab.set_coordinate_list(coordinate_list)
-        return
+
+        eta = self.get_ETA()
+        self.text_ETA.setText(eta)
+
+    def bounds_changed(self, new_bounds):
+        self.scan_params = new_bounds
+
+        self.scan_params2 = []
+        self.x_pixel_size = self.text_x_size.text()
+        self.y_pixel_size = self.text_y_size.text()
+        self.dwell_time = self.text_dwell.text()
+        coordinate_list = []
+
+        self.parent.file_tab.scan_table.setRowCount(len(self.scan_params))
+        for i in range(len(self.scan_params)): # i is the row number
+            self.parent.file_tab.scan_table.setItem(i,0,QTableWidgetItem(str(self.scan_params[i][1]))) #  x center
+            self.parent.file_tab.scan_table.setItem(i,1,QTableWidgetItem(str(self.scan_params[i][3]))) #  y center
+            self.parent.file_tab.scan_table.setItem(i,2,QTableWidgetItem(str(0))) #  z center
+            self.parent.file_tab.scan_table.setItem(i,3,QTableWidgetItem(str(self.scan_params[i][0]))) #  theta
+            self.parent.file_tab.scan_table.setItem(i,4,QTableWidgetItem(str(self.scan_params[i][2]))) #  x width
+            self.parent.file_tab.scan_table.setItem(i,5,QTableWidgetItem(str(self.x_pixel_size))) #  x step_size
+            self.parent.file_tab.scan_table.setItem(i,6,QTableWidgetItem(str(self.scan_params[i][4]))) #  y width
+            self.parent.file_tab.scan_table.setItem(i,7,QTableWidgetItem(str(self.y_pixel_size))) #  y step_sze
+            self.parent.file_tab.scan_table.setItem(i,8,QTableWidgetItem(str(self.dwell_time))) #  dwell time
+
+            coordinate_list.append((self.scan_params[i][1], self.scan_params[i][3], 0, self.scan_params[i][0],
+                                    self.scan_params[i][1], self.scan_params[i][3]))
+
+        self.parent.file_tab.set_coordinate_list(coordinate_list)
+        eta = self.get_ETA()
+        self.text_ETA.setText(eta)
+
+    def get_ETA(self):
+
+        eta_seconds = 0
+        for i in range(len(self.scan_params)):
+           eta_seconds += (self.scan_params[i][2]/float(self.x_pixel_size)) * (self.scan_params[i][4]/float(self.y_pixel_size)) *float(self.dwell_time)/1000*1.1
+
+        eta_hours = floor(eta_seconds/3600)
+        eta_minutes = floor(eta_seconds%3600/60)
+        eta_seconds = floor(eta_seconds%60%60)
+
+        return "{}: {}: {}".format(eta_hours, eta_minutes, eta_seconds)
 
     def on_show_plots_button_click(self):
 
-        self.scan_boundary.show_roi_box()
-
-        return
+        w = self.scan_boundary.show_roi_box2()
+        self.parent.w = w
+        self.parent.w.show()
+        # self.scan_boundary.show_roi_box()
+        return w

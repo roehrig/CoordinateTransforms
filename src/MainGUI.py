@@ -220,7 +220,6 @@ class App(QWidget):
 
     @pyqtSlot()
     def on_save_config_button_clicked(self):
-
         file_name = QFileDialog.getSaveFileName(parent=self,caption='Save Config File',directory=self.config_dir)
         self.config_dir = os.path.dirname(file_name[0])
         try:
@@ -355,7 +354,19 @@ class App(QWidget):
         else:
             raise ValueError
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
+#     app = QApplication(sys.argv)
+#     ex = App()
+#     app.exec_()
+#     # sys.exit()
+
+
+def Start():
+    m = App()
+    m.show()
+    return m
+
+if __name__ == "__main__":
     app = QApplication(sys.argv)
-    ex = App()
-    sys.exit(app.exec_())
+    window = Start()
+    app.exec_()
